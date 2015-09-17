@@ -232,7 +232,7 @@ static void client_close(struct ustream *s)
 {
   struct client *cl = container_of (s, struct client, s.stream);
 	ap_list *ap = NULL;
-	
+
 	print_debug_log ("[debug] [fd:%d connection closed!!]\n", cl->s.fd.fd);
 	if ((ap = find_apmember (NULL, NULL, cl->s.fd.fd)) != NULL)
   {
@@ -244,7 +244,7 @@ static void client_notify_state(struct ustream *s)
 {
   if (!s->eof)
     return;
-	
+
 	if (!s->w.data_bytes)
     return client_close (s);
 }
@@ -339,7 +339,7 @@ void aplist_init(void)
 		ap->apinfo.encrypt[strlen (ap->apinfo.encrypt) - 1] = 0;
 		ap->apinfo.key[strlen (ap->apinfo.key) - 1] = 0;
 		insert_apmember (ap, i, 0);
-		ap = NULL;		
+		ap = NULL;
 	}
   return;
 }
@@ -389,7 +389,7 @@ void tplist_init(void)
 }
 
 #ifdef MW200H
-int get_loca_ip(void) 
+int get_loca_ip(void)
 {
   int sockfd;
   char *ptr, buf[2048], addrstr[INET_ADDRSTRLEN];
@@ -439,7 +439,7 @@ static void acd_ubus_cb(struct ubus_request *req, int type, struct blob_attr *ms
 		fprintf(stderr, "No return code received from server\n");
 		return;
 	}
-	blobmsg_for_each_attr(attr, tb[IPADDR], len) 
+	blobmsg_for_each_attr(attr, tb[IPADDR], len)
 	{
 		blobmsg_parse(ip_policy, __CFG_MAX, tb, blobmsg_data(attr), blobmsg_data_len(attr));
 		if (tb[ADDR])
@@ -450,14 +450,14 @@ static void acd_ubus_cb(struct ubus_request *req, int type, struct blob_attr *ms
 	}
 }
 
-int get_loca_ip(void) 
+int get_loca_ip(void)
 {
 	uint32_t id;
 
 	if (ubus_lookup_id(ctx, "network.interface.lan", &id)) {
 		return -1;
 	}
-	
+
 	ubus_invoke(ctx, id, "status", NULL, acd_ubus_cb, NULL, 5000);
 	return 0;
 }
@@ -505,7 +505,7 @@ int sproto_encode_cb(void *ud, const char *tagname, int type, int index, struct 
 
 	if (length < 2 * SIZEOF_LENGTH)
 		return 0;
-	
+
 	switch (type) {
 		case SPROTO_TINTEGER: {
 			if (strcasecmp (tagname, "type") == 0)
@@ -808,7 +808,7 @@ int ap_online_proc(ap_list *ap, int sfd)
 		strcpy (apl->apinfo.id, "0");
 		strcpy (apl->apinfo.rip, rip);
 	}
-	else 
+	else
 	{
 		strcpy (apl->apinfo.aip, ap->apinfo.aip);
 		strcpy (apl->apinfo.sn, ap->apinfo.sn);
@@ -1187,7 +1187,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
     memset (ap->apinfo.encrypt, 0, sizeof (ap->apinfo.encrypt));
     memset (ap->apinfo.key, 0, sizeof (ap->apinfo.key));
   }
-  
+
 	if (apname != NULL && apname[0] != 0)
   {
     memset (ap->apname, 0, sizeof (ap->apname));
@@ -1274,7 +1274,7 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
     goto error;
 	}
 	sprintf (sid, "%d", id);
-  if ((id == 0 && edit_temp0_flag== FALSE) || (tp = find_template (sid)) == NULL)
+  if ((id == 0 && edit_temp0_flag== false) || (tp = find_template (sid)) == NULL)
   {
     blobmsg_add_string (&b, "msg", "template id invalid");
     goto error;
@@ -1661,7 +1661,7 @@ static const struct ubus_method acd_methods[] = {
   		, 1 << MAC | 1 << SN | 1 << NAME | 1 << TMPLATID | 1 << CHANNEL | 1 << TXPOWER),
   UBUS_METHOD_MASK ("templatedit", ubus_proc_templatedit, templatedit_policy
   		, 1 << TMPLATID | 1 << SSID | 1 << ENCRYPT | 1 << NAME | 1 << KEY | 1<<EDIT_FLAG),
-  	
+
   UBUS_METHOD_MASK ("templatelist", ubus_proc_templatelist, templatelist_policy
   		, 1 << TMPLATID),
   UBUS_METHOD_MASK ("templateadd", ubus_proc_templateadd, templateadd_policy
@@ -1691,7 +1691,7 @@ static void server_main(void)
   ret = ubus_add_object (ctx, &acd_object);
   if (ret)
     fprintf (stderr, "Failed to add object: %s\n", ubus_strerror (ret));
-	
+
   return;
 }
 
@@ -1756,7 +1756,7 @@ int main(int argc, char **argv)
 {
   int ch;
   const char *ubus_socket = NULL;
-	while ((ch = getopt(argc, argv, "dp:s:")) != -1) 
+	while ((ch = getopt(argc, argv, "dp:s:")) != -1)
 	{
 		switch(ch) {
 			case 'p':
@@ -1774,7 +1774,7 @@ int main(int argc, char **argv)
   }
   uloop_init ();
   signal (SIGPIPE, SIG_IGN);
-	
+
   ctx = ubus_connect (ubus_socket);
 	if (!ctx) {
       fprintf (stderr, "Failed to connect to ubus\n");
