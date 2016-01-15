@@ -1,0 +1,332 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+ACd_STATUS_OK	acd.h	/^	ACd_STATUS_OK,$/;"	e	enum:ACd_msg_status
+ACd_STATUS_REBOOT_OK	acd.h	/^	ACd_STATUS_REBOOT_OK,$/;"	e	enum:ACd_msg_status
+ACd_msg_status	acd.h	/^enum ACd_msg_status {$/;"	g
+ADDR	acd.h	/^	ADDR,$/;"	e	enum:__anon1
+AIP	acd.h	/^	AIP,$/;"	e	enum:__anon1
+AP_CMD	acd.h	48;"	d
+AP_INFO	acd.h	47;"	d
+AP_STATUS	acd.h	46;"	d
+ApCfgInfo	acd.h	/^}ApCfgInfo;$/;"	t	typeref:struct:ap_cfg_info
+BUFLEN	acd.h	44;"	d
+CHANNEL	acd.h	/^	CHANNEL,$/;"	e	enum:__anon1
+CHUNK_SIZE	sproto.c	9;"	d	file:
+CMD	acd.h	/^	CMD,$/;"	e	enum:__anon1
+EDIT_FLAG	acd.h	/^	EDIT_FLAG,$/;"	e	enum:__anon1
+ENCODE_BUFFERSIZE	acd.h	41;"	d
+ENCODE_DEEPLEVEL	acd.h	43;"	d
+ENCODE_MAXSIZE	acd.h	42;"	d
+ENCRYPT	acd.h	/^	ENCRYPT,$/;"	e	enum:__anon1
+EncdUd	acd.h	/^}EncdUd;$/;"	t	typeref:struct:encode_ud
+HVER	acd.h	/^	HVER,$/;"	e	enum:__anon1
+INET_ADDRSTRLEN	acd.h	45;"	d
+IPADDR	acd.h	/^	IPADDR,$/;"	e	enum:__anon1
+KEY	acd.h	/^	KEY,$/;"	e	enum:__anon1
+LMAC	acd.h	/^	LMAC,$/;"	e	enum:__anon1
+MAC	acd.h	/^	MAC,$/;"	e	enum:__anon1
+MAC_LEN	acd.c	11;"	d	file:
+NAME	acd.h	/^	NAME,$/;"	e	enum:__anon1
+OFF	acd.h	53;"	d
+ON	acd.h	52;"	d
+ONLINE	acd.h	/^	ONLINE,$/;"	e	enum:__anon1
+REBOOT	acd.h	54;"	d
+RESPONSE_ERROR	acd.h	49;"	d
+RESPONSE_OK	acd.h	51;"	d
+RESPONSE_PACK	acd.h	50;"	d
+RIP	acd.h	/^	RIP,$/;"	e	enum:__anon1
+SIZEOF_FIELD	sproto.c	12;"	d	file:
+SIZEOF_HEADER	sproto.c	11;"	d	file:
+SIZEOF_LENGTH	acd.h	40;"	d
+SIZEOF_LENGTH	sproto.c	10;"	d	file:
+SN	acd.h	/^	SN,$/;"	e	enum:__anon1
+SPROTO_REQUEST	sproto.h	9;"	d
+SPROTO_RESPONSE	sproto.h	10;"	d
+SPROTO_TARRAY	sproto.c	8;"	d	file:
+SPROTO_TBOOLEAN	sproto.h	13;"	d
+SPROTO_TINTEGER	sproto.h	12;"	d
+SPROTO_TSTRING	sproto.h	14;"	d
+SPROTO_TSTRUCT	sproto.h	15;"	d
+SSID	acd.h	/^	SSID,$/;"	e	enum:__anon1
+STAMAC	acd.h	/^	STAMAC,$/;"	e	enum:__anon2
+SVER	acd.h	/^	SVER,$/;"	e	enum:__anon1
+TMPLATID	acd.h	/^	TMPLATID,$/;"	e	enum:__anon1
+TXPOWER	acd.h	/^	TXPOWER,$/;"	e	enum:__anon1
+UPGRADE	acd.h	55;"	d
+_ACD_H	acd.h	2;"	d
+_RW_H	rw.h	2;"	d
+__ACd_STATUS_LAST	acd.h	/^	__ACd_STATUS_LAST$/;"	e	enum:ACd_msg_status
+__CFG_MAX	acd.h	/^	__CFG_MAX$/;"	e	enum:__anon1
+__STA_MAX	acd.h	/^	__STA_MAX$/;"	e	enum:__anon2
+acd_init	acd.c	/^void acd_init(void)$/;"	f
+acd_methods	acd.c	/^static const struct ubus_method acd_methods[] = {$/;"	v	typeref:struct:ubus_method	file:
+acd_object	acd.c	/^static struct ubus_object acd_object = {$/;"	v	typeref:struct:ubus_object	file:
+acd_object_type	acd.c	/^static struct ubus_object_type acd_object_type =$/;"	v	typeref:struct:ubus_object_type	file:
+acd_ubus_cb	acd.c	/^static void acd_ubus_cb(struct ubus_request *req, int type, struct blob_attr *msg)$/;"	f	file:
+addr	acd.h	/^	char addr[50],$/;"	m	struct:__anon3
+adjust	sprotoparser.lua	/^local function adjust(r)$/;"	f
+aip	acd.h	/^			 aip[20],$/;"	m	struct:ap_cfg_info
+ap_cfg_info	acd.h	/^typedef struct ap_cfg_info$/;"	s
+ap_cfg_opt	acd.h	/^static const char *ap_cfg_opt[] = {$/;"	v
+ap_info	acd.h	/^typedef struct ap_info$/;"	s
+ap_list	acd.h	/^}ap_list;$/;"	t	typeref:struct:ap_info
+ap_online_proc	acd.c	/^int ap_online_proc(ap_list *ap, int sfd)$/;"	f
+apcmd	acd.h	/^}apcmd;$/;"	t	typeref:struct:__anon3
+apcmd_policy	acd.c	/^static const struct blobmsg_policy apcmd_policy[__CFG_MAX] = {$/;"	v	typeref:struct:blobmsg_policy	file:
+apdel_policy	acd.c	/^static const struct blobmsg_policy apdel_policy[__CFG_MAX] = {$/;"	v	typeref:struct:blobmsg_policy	file:
+apedit_cb	acd.c	/^int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)$/;"	f
+apedit_policy	acd.c	/^static const struct blobmsg_policy apedit_policy[__CFG_MAX] = {$/;"	v	typeref:struct:blobmsg_policy	file:
+apid	acd.h	/^	int apid,$/;"	m	struct:ap_info
+apinfo	acd.h	/^	ApCfgInfo apinfo;$/;"	m	struct:ap_info
+apinfo_policy	acd.c	/^static const struct blobmsg_policy apinfo_policy[__CFG_MAX] = {$/;"	v	typeref:struct:blobmsg_policy	file:
+apinfo_request	acd.h	/^struct apinfo_request {$/;"	s
+apinfo_to_json_string	acd.c	/^static void apinfo_to_json_string(struct blob_buf *buf, ap_list *ap)$/;"	f	file:
+aplist	acd.c	/^static ap_list *aplist = NULL;	\/\/ap information list$/;"	v	file:
+aplist_init	acd.c	/^void aplist_init(void)$/;"	f
+apmac	acd.h	/^			 apmac[20],$/;"	m	struct:ap_cfg_info
+apname	acd.h	/^		 		apname[50];$/;"	m	struct:ap_info
+b	acd.h	/^static struct blob_buf b;$/;"	v	typeref:struct:blob_buf
+base	acd.h	/^	int base;$/;"	m	struct:sproto_type
+base	sproto.c	/^	int base;$/;"	m	struct:sproto_type	file:
+channel	acd.h	/^			 channel[5],$/;"	m	struct:ap_cfg_info
+checktype	sprotoparser.lua	/^local function checktype(types, ptype, t)$/;"	f
+chunk	acd.h	/^struct chunk {$/;"	s
+chunk	sproto.c	/^struct chunk {$/;"	s	file:
+client	acd.h	/^struct client {$/;"	s
+client_close	acd.c	/^static void client_close(struct ustream *s)$/;"	f	file:
+client_notify_state	acd.c	/^static void client_notify_state(struct ustream *s)$/;"	f	file:
+client_read_cb	acd.c	/^static void client_read_cb(struct ustream *s, int bytes)$/;"	f	file:
+cltaddr	acd.h	/^	struct client *cltaddr;$/;"	m	struct:ap_info	typeref:struct:ap_info::client
+cmd	acd.h	/^	apcmd cmd;$/;"	m	struct:ap_info
+cmd	acd.h	/^	int  cmd,$/;"	m	struct:__anon3
+container_of	acd.h	59;"	d
+convert.protocol	sprotoparser.lua	/^function convert.protocol(all, obj)$/;"	f
+convert.type	sprotoparser.lua	/^function convert.type(all, obj)$/;"	f
+count_array	sproto.c	/^count_array(const uint8_t * stream) {$/;"	f	file:
+count_lines	sprotoparser.lua	/^local function count_lines(_,pos, parser_state)$/;"	f
+create_aplist	acd.c	/^ap_list *create_aplist(void)$/;"	f
+create_from_bundle	sproto.c	/^create_from_bundle(struct sproto *s, const uint8_t * stream, size_t sz) {$/;"	f	file:
+create_tplist	acd.c	/^tmplat_list *create_tplist(void)$/;"	f
+ctr	acd.h	/^	int ctr;$/;"	m	struct:client
+ctx	acd.h	/^static struct ubus_context *ctx;$/;"	v	typeref:struct:ubus_context
+current	acd.h	/^	struct chunk * current;$/;"	m	struct:pool	typeref:struct:pool::chunk
+current	sproto.c	/^	struct chunk * current;$/;"	m	struct:pool	typeref:struct:pool::chunk	file:
+current_used	acd.h	/^	int current_used;$/;"	m	struct:pool
+current_used	sproto.c	/^	int current_used;$/;"	m	struct:pool	file:
+data	acd.h	/^	char data[];$/;"	m	struct:apinfo_request
+debug	acd.c	/^static FILE *debug = NULL;$/;"	v	file:
+decode_array	sproto.c	/^decode_array(sproto_callback cb, void *ud, struct field *f, uint8_t * stream) {$/;"	f	file:
+decode_array_object	sproto.c	/^decode_array_object(sproto_callback cb, void *ud, struct field *f, uint8_t * stream, int sz) {$/;"	f	file:
+del_apinfo	rw.c	/^void del_apinfo(char *fname, char *tagname)$/;"	f
+del_apmember	acd.c	/^void del_apmember(char *mac, char *sn)$/;"	f
+del_template	acd.c	/^void del_template(tmplat_list *h, char *id)$/;"	f
+encode_array	sproto.c	/^encode_array(sproto_callback cb, void *ud, struct field *f, uint8_t *data, int size) {$/;"	f	file:
+encode_integer	sproto.c	/^encode_integer(uint32_t v, uint8_t * data, int size) {$/;"	f	file:
+encode_integer_array	sproto.c	/^encode_integer_array(sproto_callback cb, void *ud, struct field *f, uint8_t *buffer, int size) {$/;"	f	file:
+encode_string	sproto.c	/^encode_string(sproto_callback cb, void *ud, struct field *f, uint8_t *data, int size) {$/;"	f	file:
+encode_struct	sproto.c	/^encode_struct(sproto_callback cb, void *ud, struct field *f, uint8_t *data, int size) {$/;"	f	file:
+encode_ud	acd.h	/^typedef struct encode_ud {$/;"	s
+encode_uint64	sproto.c	/^encode_uint64(uint64_t v, uint8_t * data, int size) {$/;"	f	file:
+encodeall	sprotoparser.lua	/^local function encodeall(r)$/;"	f
+encrypt	acd.h	/^			 encrypt[50],$/;"	m	struct:ap_cfg_info
+encrypt	acd.h	/^			 encrypt[50],$/;"	m	struct:tmplat_list
+expand64	sproto.c	/^expand64(uint32_t v) {$/;"	f	file:
+f	acd.h	/^	struct field *f;$/;"	m	struct:sproto_type	typeref:struct:sproto_type::field
+f	sproto.c	/^	struct field *f;$/;"	m	struct:sproto_type	typeref:struct:sproto_type::field	file:
+fd	acd.h	/^	int fd;$/;"	m	struct:ap_info
+fd	acd.h	/^	int fd;$/;"	m	struct:apinfo_request
+field	acd.h	/^struct field {$/;"	s
+field	sproto.c	/^struct field {$/;"	s	file:
+fill_data	acd.c	/^void fill_data(ap_list *apcfg, char *tagname, char *value, int len)$/;"	f
+fill_encode_data	acd.c	/^void fill_encode_data(ap_list *apcfg, char *tagname, char *value)$/;"	f
+fill_size	sproto.c	/^fill_size(uint8_t * data, int sz) {$/;"	f	file:
+find_apid	acd.c	/^ap_list *find_apid(int id)$/;"	f
+find_apmember	acd.c	/^ap_list *find_apmember(char *mac, char *sn, int fd)$/;"	f
+find_template	acd.c	/^tmplat_list *find_template(char *id)$/;"	f
+findtag	sproto.c	/^findtag(struct sproto_type *st, int tag) {$/;"	f	file:
+flattypename	sprotoparser.lua	/^local function flattypename(r)$/;"	f
+foreach_aplist	acd.c	/^int foreach_aplist(char *mac, char *filename)$/;"	f
+format_ap_cfg	acd.c	/^void format_ap_cfg(ap_list *apinfo, char *res)$/;"	f
+format_tmp_cfg	acd.c	/^void format_tmp_cfg(tmplat_list *tpcfg, char *res)$/;"	f
+free_mem	acd.c	/^void free_mem(ap_list *ap)$/;"	f
+get_loca_ip	acd.c	/^int get_loca_ip(void)$/;"	f
+header	acd.h	/^	struct chunk * header;$/;"	m	struct:pool	typeref:struct:pool::chunk
+header	sproto.c	/^	struct chunk * header;$/;"	m	struct:pool	typeref:struct:pool::chunk	file:
+hver	acd.h	/^			 hver[30],$/;"	m	struct:ap_cfg_info
+id	acd.h	/^			 id[5],$/;"	m	struct:tmplat_list
+id	acd.h	/^	char id[20],$/;"	m	struct:ap_cfg_info
+idx	acd.h	/^	int idx;$/;"	m	struct:apinfo_request
+import_field	sproto.c	/^import_field(struct sproto *s, struct field *f, const uint8_t * stream) {$/;"	f	file:
+import_protocol	sproto.c	/^import_protocol(struct sproto *s, struct protocol *p, const uint8_t * stream) {$/;"	f	file:
+import_string	sproto.c	/^import_string(struct sproto *s, const uint8_t * stream) {$/;"	f	file:
+import_type	sproto.c	/^import_type(struct sproto *s, struct sproto_type *t, const uint8_t * stream) {$/;"	f	file:
+inline	msvcint.h	5;"	d
+insert_apmember	acd.c	/^ap_list *insert_apmember(ap_list *ap, int id, int fd)$/;"	f
+insert_template	acd.c	/^int insert_template(tmplat_list *s)$/;"	f
+int16_t	msvcint.h	/^typedef signed __int16    int16_t;$/;"	t
+int16_t	msvcint.h	/^typedef signed short      int16_t;$/;"	t
+int32_t	msvcint.h	/^typedef signed __int32    int32_t;$/;"	t
+int32_t	msvcint.h	/^typedef signed int        int32_t;$/;"	t
+int64_t	msvcint.h	/^typedef signed __int64       int64_t;$/;"	t
+int8_t	msvcint.h	/^typedef signed __int8     int8_t;$/;"	t
+int8_t	msvcint.h	/^typedef signed char       int8_t;$/;"	t
+ip_policy	acd.c	/^static const struct blobmsg_policy ip_policy[__CFG_MAX] = {$/;"	v	typeref:struct:blobmsg_policy	file:
+is_ip	acd.c	/^int is_ip(const char *str)$/;"	f
+key	acd.h	/^			 key[300],$/;"	m	struct:ap_cfg_info
+key	acd.h	/^			 key[30];$/;"	m	struct:tmplat_list
+lan_policy	acd.c	/^static const struct blobmsg_policy lan_policy[__CFG_MAX] = {$/;"	v	typeref:struct:blobmsg_policy	file:
+len	acd.h	/^			len;$/;"	m	struct:ap_info
+llink	acd.h	/^	struct ap_info *llink;$/;"	m	struct:ap_info	typeref:struct:ap_info::ap_info
+llink	acd.h	/^	struct tmplat_list *llink;$/;"	m	struct:tmplat_list	typeref:struct:tmplat_list::tmplat_list
+local exception 	sprotoparser.lua	/^local exception = lpeg.Cmt( lpeg.Carg(1) , function ( _ , pos, parser_state)$/;"	f
+main	acd.c	/^int main(int argc, char **argv)$/;"	f
+maxn	acd.h	/^	int maxn;$/;"	m	struct:sproto_type
+maxn	sproto.c	/^	int maxn;$/;"	m	struct:sproto_type	file:
+md5	acd.h	/^			 md5[36];$/;"	m	struct:__anon3
+memcat	acd.c	/^int memcat(char *res, char *buf, int slen, int len)$/;"	f
+memory	acd.h	/^	struct pool memory;$/;"	m	struct:sproto	typeref:struct:sproto::pool
+memory	sproto.c	/^	struct pool memory;$/;"	m	struct:sproto	typeref:struct:sproto::pool	file:
+msvc_int_h	msvcint.h	2;"	d
+multipat	sprotoparser.lua	/^local function multipat(pat)$/;"	f
+n	acd.h	/^	int n;$/;"	m	struct:sproto_type
+n	sproto.c	/^	int n;$/;"	m	struct:sproto_type	file:
+name	acd.h	/^	const char * name;$/;"	m	struct:field
+name	acd.h	/^	const char * name;$/;"	m	struct:sproto_type
+name	acd.h	/^	const char *name;$/;"	m	struct:protocol
+name	sproto.c	/^	const char * name;$/;"	m	struct:field	file:
+name	sproto.c	/^	const char * name;$/;"	m	struct:sproto_type	file:
+name	sproto.c	/^	const char *name;$/;"	m	struct:protocol	file:
+namedpat	sprotoparser.lua	/^local function namedpat(name, pat)$/;"	f
+next	acd.h	/^	struct chunk * next;$/;"	m	struct:chunk	typeref:struct:chunk::chunk
+next	sproto.c	/^	struct chunk * next;$/;"	m	struct:chunk	typeref:struct:chunk::chunk	file:
+next_client	acd.c	/^static struct client *next_client = NULL;$/;"	v	typeref:struct:client	file:
+ok	acd.h	/^	    ok;$/;"	m	struct:encode_ud
+online	acd.h	/^	bool online;$/;"	m	struct:ap_info
+p	acd.h	/^	struct sproto_type * p[2];$/;"	m	struct:protocol	typeref:struct:protocol::sproto_type
+p	sproto.c	/^	struct sproto_type * p[2];$/;"	m	struct:protocol	typeref:struct:protocol::sproto_type	file:
+pack_seg	sproto.c	/^pack_seg(const uint8_t *src, uint8_t * buffer, int sz, int n) {$/;"	f	file:
+packbytes	sprotoparser.lua	/^local function packbytes(str)$/;"	f
+packfield	sprotoparser.lua	/^local function packfield(f)$/;"	f
+packgroup	sprotoparser.lua	/^local function packgroup(t,p)$/;"	f
+packproto	sprotoparser.lua	/^local function packproto(name, p, alltypes)$/;"	f
+packtype	sprotoparser.lua	/^local function packtype(name, t, alltypes)$/;"	f
+packvalue	sprotoparser.lua	/^local function packvalue(id)$/;"	f
+parser	sprotoparser.lua	/^local function parser(text,filename)$/;"	f
+pool	acd.h	/^struct pool {$/;"	s
+pool	sproto.c	/^struct pool {$/;"	s	file:
+pool_alloc	sproto.c	/^pool_alloc(struct pool *p, size_t sz) {$/;"	f	file:
+pool_init	sproto.c	/^pool_init(struct pool *p) {$/;"	f	file:
+pool_newchunk	sproto.c	/^pool_newchunk(struct pool *p, size_t sz) {$/;"	f	file:
+pool_release	sproto.c	/^pool_release(struct pool *p) {$/;"	f	file:
+port	acd.c	/^static const char *port = "4444";$/;"	v	file:
+print_debug_log	acd.c	/^void print_debug_log(const char *form ,...)$/;"	f
+proc_template_edit	acd.c	/^int proc_template_edit(tmplat_list *tpcfg, struct ubus_request_data *req)$/;"	f
+proto	acd.h	/^	struct protocol * proto;$/;"	m	struct:sproto	typeref:struct:sproto::protocol
+proto	sproto.c	/^	struct protocol * proto;$/;"	m	struct:sproto	typeref:struct:sproto::protocol	file:
+protocol	acd.h	/^struct protocol {$/;"	s
+protocol	sproto.c	/^struct protocol {$/;"	s	file:
+protocol_n	acd.h	/^	int protocol_n;$/;"	m	struct:sproto
+protocol_n	sproto.c	/^	int protocol_n;$/;"	m	struct:sproto	file:
+query_proto	sproto.c	/^query_proto(struct sproto *sp, int tag) {$/;"	f	file:
+rcv_and_proc_data	acd.c	/^int rcv_and_proc_data(char *data, int len, struct client *cl)$/;"	f
+read_apinfo	rw.c	/^char *read_apinfo(char *fname, char *tagname, char *value)$/;"	f
+req	acd.h	/^	struct ubus_request_data req;$/;"	m	struct:apinfo_request	typeref:struct:apinfo_request::ubus_request_data
+rip	acd.c	/^char rip[20] = { 0 };$/;"	v
+rip	acd.h	/^			 rip[20],$/;"	m	struct:ap_cfg_info
+rlink	acd.h	/^	struct ap_info *rlink;$/;"	m	struct:ap_info	typeref:struct:ap_info::ap_info
+rlink	acd.h	/^	struct tmplat_list *rlink;$/;"	m	struct:tmplat_list	typeref:struct:tmplat_list::tmplat_list
+run_server	acd.c	/^static int run_server(void)$/;"	f	file:
+s	acd.h	/^	struct ustream_fd s;$/;"	m	struct:client	typeref:struct:client::ustream_fd
+send_data_to_ap	acd.c	/^int send_data_to_ap(ap_list *ap)$/;"	f
+server	acd.c	/^static struct uloop_fd server;$/;"	v	typeref:struct:uloop_fd	file:
+server_cb	acd.c	/^static void server_cb(struct uloop_fd *fd, unsigned int events)$/;"	f	file:
+server_main	acd.c	/^static void server_main(void)$/;"	f	file:
+session	acd.h	/^	    session,$/;"	m	struct:encode_ud
+sin	acd.h	/^	struct sockaddr_in sin;$/;"	m	struct:client	typeref:struct:client::sockaddr_in
+sn	acd.h	/^			 sn[20];$/;"	m	struct:ap_cfg_info
+sparser.dump	sprotoparser.lua	/^function sparser.dump(str)$/;"	f
+sparser.parse	sprotoparser.lua	/^function sparser.parse(text, name)$/;"	f
+spro_new	acd.c	/^static struct sproto *spro_new = NULL;	\/\/the protocol$/;"	v	typeref:struct:sproto	file:
+sproto	acd.h	/^struct sproto {$/;"	s
+sproto	sproto.c	/^struct sproto {$/;"	s	file:
+sproto_callback	sproto.h	/^typedef int (*sproto_callback)(void *ud, const char *tagname, int type, int index, struct sproto_type *, void *value, int length);$/;"	t
+sproto_create	sproto.c	/^sproto_create(const void * proto, size_t sz) {$/;"	f
+sproto_decode	sproto.c	/^sproto_decode(struct sproto_type *st, const void * data, int size, sproto_callback cb, void *ud) {$/;"	f
+sproto_dump	sproto.c	/^sproto_dump(struct sproto *s) {$/;"	f
+sproto_encode	sproto.c	/^sproto_encode(struct sproto_type *st, void * buffer, int size, $/;"	f
+sproto_encode_cb	acd.c	/^int sproto_encode_cb(void *ud, const char *tagname, int type, int index, struct sproto_type *st, void *value, int length)$/;"	f
+sproto_encode_data	acd.c	/^int sproto_encode_data(struct encode_ud *ud, char *res)$/;"	f
+sproto_h	sproto.h	2;"	d
+sproto_header_parser	acd.c	/^int sproto_header_parser(char *pack, int size, struct encode_ud *ud, char *unpack)$/;"	f
+sproto_name	sproto.c	/^sproto_name(struct sproto_type * st) {$/;"	f
+sproto_pack	sproto.c	/^sproto_pack(const void * srcv, int srcsz, void * bufferv, int bufsz) {$/;"	f
+sproto_parser	acd.c	/^int sproto_parser(char *data, int headlen, struct encode_ud *ud)$/;"	f
+sproto_parser_cb	acd.c	/^int sproto_parser_cb(void *ud, const char *tagname, int type, int index, struct sproto_type *st, void *value, int length)$/;"	f
+sproto_protoname	sproto.c	/^sproto_protoname(struct sproto *sp, int proto) {$/;"	f
+sproto_protoquery	sproto.c	/^sproto_protoquery(struct sproto *sp, int proto, int what) {$/;"	f
+sproto_prototag	sproto.c	/^sproto_prototag(struct sproto *sp, const char * name) {$/;"	f
+sproto_read_entity	acd.c	/^int sproto_read_entity(char *filename)$/;"	f
+sproto_release	sproto.c	/^sproto_release(struct sproto * s) {$/;"	f
+sproto_type	acd.h	/^struct sproto_type {$/;"	s
+sproto_type	sproto.c	/^sproto_type(struct sproto *sp, const char * type_name) {$/;"	f
+sproto_type	sproto.c	/^struct sproto_type {$/;"	s	file:
+sproto_unpack	sproto.c	/^sproto_unpack(const void * srcv, int srcsz, void * bufferv, int bufsz) {$/;"	f
+ssid	acd.h	/^			 ssid[50],$/;"	m	struct:tmplat_list
+ssid	acd.h	/^	 		 ssid[200],$/;"	m	struct:ap_cfg_info
+st	acd.h	/^	struct sproto_type * st;$/;"	m	struct:field	typeref:struct:field::sproto_type
+st	sproto.c	/^	struct sproto_type * st;$/;"	m	struct:field	typeref:struct:field::sproto_type	file:
+stamac	acd.h	/^	char *stamac,$/;"	m	struct:ap_info
+status	acd.h	/^			 status;$/;"	m	struct:__anon3
+struct_field	sproto.c	/^struct_field(const uint8_t * stream, size_t sz) {$/;"	f	file:
+sver	acd.h	/^			 sver[30],$/;"	m	struct:ap_cfg_info
+tag	acd.h	/^	int tag;$/;"	m	struct:field
+tag	acd.h	/^	int tag;$/;"	m	struct:protocol
+tag	sproto.c	/^	int tag;$/;"	m	struct:field	file:
+tag	sproto.c	/^	int tag;$/;"	m	struct:protocol	file:
+template_to_blob	acd.c	/^static void template_to_blob(struct blob_buf *buf, tmplat_list *t)$/;"	f	file:
+templateadd_policy	acd.c	/^static const struct blobmsg_policy templateadd_policy[__CFG_MAX] = {$/;"	v	typeref:struct:blobmsg_policy	file:
+templatedel_cb	acd.c	/^int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)$/;"	f
+templatedel_policy	acd.c	/^static const struct blobmsg_policy templatedel_policy[__CFG_MAX] = {$/;"	v	typeref:struct:blobmsg_policy	file:
+templatedit_cb	acd.c	/^int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)$/;"	f
+templatedit_policy	acd.c	/^static const struct blobmsg_policy templatedit_policy[__CFG_MAX] = {$/;"	v	typeref:struct:blobmsg_policy	file:
+templatelist_policy	acd.c	/^static const struct blobmsg_policy templatelist_policy[__CFG_MAX] = {$/;"	v	typeref:struct:blobmsg_policy	file:
+timeout	acd.h	/^	struct uloop_timeout timeout;$/;"	m	struct:apinfo_request	typeref:struct:apinfo_request::uloop_timeout
+tmplat_list	acd.h	/^typedef struct tmplat_list$/;"	s
+tmplat_list	acd.h	/^}tmplat_list;$/;"	t	typeref:struct:tmplat_list
+todword	sproto.c	/^todword(const uint8_t *p) {$/;"	f	file:
+toword	sproto.c	/^toword(const uint8_t * p) {$/;"	f	file:
+tplist	acd.c	/^tmplat_list *tplist = NULL;$/;"	v
+tplist_init	acd.c	/^void tplist_init(void)$/;"	f
+tpname	acd.h	/^	char tpname[50],$/;"	m	struct:tmplat_list
+txpower	acd.h	/^			 txpower[5],$/;"	m	struct:ap_cfg_info
+type	acd.h	/^	int type,$/;"	m	struct:encode_ud
+type	acd.h	/^	int type;$/;"	m	struct:field
+type	acd.h	/^	struct sproto_type * type;$/;"	m	struct:sproto	typeref:struct:sproto::sproto_type
+type	sproto.c	/^	int type;$/;"	m	struct:field	file:
+type	sproto.c	/^	struct sproto_type * type;$/;"	m	struct:sproto	typeref:struct:sproto::sproto_type	file:
+type_n	acd.h	/^	int type_n;$/;"	m	struct:sproto
+type_n	sproto.c	/^	int type_n;$/;"	m	struct:sproto	file:
+ubus_proc_apcmd	acd.c	/^static int ubus_proc_apcmd(struct ubus_context *ctx, struct ubus_object *obj,$/;"	f	file:
+ubus_proc_apdel	acd.c	/^static int ubus_proc_apdel(struct ubus_context *ctx, struct ubus_object *obj,$/;"	f	file:
+ubus_proc_apedit	acd.c	/^static int ubus_proc_apedit(struct ubus_context *ctx, struct ubus_object *obj,$/;"	f	file:
+ubus_proc_apinfo	acd.c	/^static int ubus_proc_apinfo(struct ubus_context *ctx, struct ubus_object *obj,$/;"	f	file:
+ubus_proc_templateadd	acd.c	/^static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *obj,$/;"	f	file:
+ubus_proc_templatedel	acd.c	/^static int ubus_proc_templatedel(struct ubus_context *ctx, struct ubus_object *obj,$/;"	f	file:
+ubus_proc_templatedit	acd.c	/^static int ubus_proc_templatedit(struct ubus_context *ctx, struct ubus_object *obj,$/;"	f	file:
+ubus_proc_templatelist	acd.c	/^static int ubus_proc_templatelist(struct ubus_context *ctx, struct ubus_object *obj,$/;"	f	file:
+ud	acd.h	/^	EncdUd ud;$/;"	m	struct:ap_info
+uint16_t	msvcint.h	/^typedef unsigned __int16  uint16_t;$/;"	t
+uint16_t	msvcint.h	/^typedef unsigned short    uint16_t;$/;"	t
+uint32_t	msvcint.h	/^typedef unsigned __int32  uint32_t;$/;"	t
+uint32_t	msvcint.h	/^typedef unsigned int      uint32_t;$/;"	t
+uint32_to_uint64	sproto.c	/^uint32_to_uint64(int negative, uint8_t *buffer) {$/;"	f	file:
+uint64_t	msvcint.h	/^typedef unsigned __int64     uint64_t;$/;"	t
+uint8_t	msvcint.h	/^typedef unsigned __int8   uint8_t;$/;"	t
+uint8_t	msvcint.h	/^typedef unsigned char     uint8_t;$/;"	t
+usage	acd.c	/^static int usage(char *prog)$/;"	f	file:
+write_apinfo	rw.c	/^int write_apinfo(char *fname, char *tagname, char *value)$/;"	f
+write_ff	sproto.c	/^write_ff(const uint8_t * src, uint8_t * des, int n) {$/;"	f	file:

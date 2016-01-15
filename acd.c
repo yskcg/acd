@@ -346,7 +346,7 @@ void aplist_init(void)
 
 void tplist_init(void)
 {
-  int i;
+  int i, err = 0;
   tmplat_list tp;
   char buf[2056], *str, name[20], *optstr, optname[30], optval[50];
   for (i = 0;; i++)
@@ -357,9 +357,15 @@ void tplist_init(void)
 		read_apinfo("tplist", name, buf);
 		if (strlen (buf) == 0)
 		{
-			if (i > 8)
-				break;
-			continue;
+			err++;
+			if (i == 0) {
+				strcpy(buf, "name=default|id=0|ssid=MoreWiFi|encrypt=none|key=");
+				write_apinfo("tplist", "template_0", buf);
+			} else {
+				if (err > 8)
+					break;
+				continue;
+			}
 		}
 		memset (&tp, 0, sizeof (tmplat_list));
 		str = strtok (buf, "|");
@@ -799,7 +805,7 @@ int ap_online_proc(ap_list *ap, int sfd)
 			print_debug_log("[debug] [find template failed!!]\n");
 			return 0;
 		}
-		strcpy(apl->apname, "morewifi");
+		strcpy(apl->apname, "");
 		strcpy (apl->apinfo.channel, "auto");
 		strcpy (apl->apinfo.txpower, "20");
 		strcpy (apl->apinfo.ssid, tp->ssid);
@@ -1745,8 +1751,6 @@ void acd_init(void)
 		get_loca_ip ();
 		sleep(2);
 	}
-  char buf[] = "name=morewifi|id=0|ssid=MoreWiFi|encrypt=none|key=12345678";
-  write_apinfo("tplist", "template_0", buf);
   tplist_init ();
   aplist_init ();
   return;
