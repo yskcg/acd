@@ -610,6 +610,8 @@ void fill_data(ap_list *apcfg, char *tagname, char *value, int len)
 
   if (strcasecmp (tagname, "hver") == 0)
     strncpy (apcfg->apinfo.hver, value, len);
+  else if (strcasecmp (tagname, "model") == 0)
+    strncpy (apcfg->apinfo.model, value, len);
   else if (strcasecmp (tagname, "sver") == 0)
     strncpy (apcfg->apinfo.sver, value, len);
   else if (strcasecmp (tagname, "sn") == 0)
@@ -818,6 +820,7 @@ int ap_online_proc(ap_list *ap, int sfd)
 	{
 		strcpy (apl->apinfo.aip, ap->apinfo.aip);
 		strcpy (apl->apinfo.sn, ap->apinfo.sn);
+		strcpy (apl->apinfo.model, ap->apinfo.model);
 		strcpy (apl->apinfo.hver, ap->apinfo.hver);
 		strcpy (apl->apinfo.sver, ap->apinfo.sver);
 		struct client *cl = apl->cltaddr;
@@ -989,6 +992,7 @@ void format_ap_cfg(ap_list *apinfo, char *res)
   sprintf (tbuf + strlen (tbuf), "mac=%s", apinfo->apinfo.apmac);
 	sprintf (tbuf + strlen (tbuf), "|name=%s", apinfo->apname);
   sprintf (tbuf + strlen (tbuf), "|sn=%s", apinfo->apinfo.sn);
+  sprintf (tbuf + strlen (tbuf), "|model=%s", apinfo->apinfo.model);
   sprintf (tbuf + strlen (tbuf), "|id=%s", apinfo->apinfo.id);
   sprintf (tbuf + strlen (tbuf), "|txpower=%s", apinfo->apinfo.txpower);
   sprintf (tbuf + strlen (tbuf), "|hver=%s", apinfo->apinfo.hver);
@@ -1021,6 +1025,7 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_list *ap)
   blobmsg_add_u32 (buf, "online", ap->online);
   blobmsg_add_string (buf, "mac", ap->apinfo.apmac);
   blobmsg_add_string (buf, "sn", ap->apinfo.sn);
+  blobmsg_add_string (buf, "model", ap->apinfo.model);
   blobmsg_add_string (buf, "hver", ap->apinfo.hver);
   blobmsg_add_string (buf, "sver", ap->apinfo.sver);
   blobmsg_add_string (buf, "aip", ap->apinfo.aip);

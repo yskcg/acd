@@ -93,6 +93,7 @@ enum {
 	LMAC,
 	IPADDR,
 	EDIT_FLAG,
+	MODEL,
 	__CFG_MAX
 };
 
@@ -160,10 +161,11 @@ typedef struct ap_cfg_info
 			 aip[20],
 			 txpower[5],
 			 apmac[20],
-			 sn[20];
+			 sn[20],
+			model[30];
 }ApCfgInfo;
 
-typedef struct 
+typedef struct
 {
 	char addr[50],
 			 md5[36];
@@ -228,6 +230,7 @@ static const char *ap_cfg_opt[] = {
 	"encrypt",
 	"txpower",
 	"name",
+	"model",
 	0};
 
 #endif
