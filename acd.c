@@ -24,6 +24,25 @@ int rcv_and_proc_data (char *data, int len, struct client *cl);
 int ap_online_proc (ap_list * ap, int sfd);
 void free_mem(ap_list *ap);
 
+
+static void gettime(struct timeval *tv)
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	tv->tv_sec = ts.tv_sec;
+	tv->tv_usec = ts.tv_nsec / 1000;
+
+}
+
+static int tv_diff(struct timeval *t1, struct timeval *t2)
+{
+	return
+		(t1->tv_sec - t2->tv_sec) * 1000 +
+		(t1->tv_usec - t2->tv_usec) / 1000;
+
+}
+
 int is_ip(const char *str)
 {
     struct in_addr addr;
@@ -242,6 +261,8 @@ static void client_close(struct ustream *s)
 
 static void client_notify_state(struct ustream *s)
 {
+  struct client *cl = container_of (s, struct client, s.stream);
+	print_debug_log ("[debug] [fd:%d state changed: %d %d!!]\n", cl->s.fd.fd, s->eof, s->w.data_bytes);
   if (!s->eof)
     return;
 
@@ -254,6 +275,7 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
   struct client *cl;
   unsigned int sl = sizeof (struct sockaddr_in);
   int sfd;
+  struct timeval timeout;
 
   if (!next_client)
     next_client = calloc (1, sizeof (*next_client));
@@ -264,6 +286,14 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
     print_debug_log ("Accept failed\n");
     return;
   }
+
+	timeout.tv_sec  = 5;
+	timeout.tv_usec = 0;
+	setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+	timeout.tv_sec  = 5;
+	timeout.tv_usec = 0;
+	setsockopt(sfd, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout));
+
 
   cl->s.stream.string_data = true;
   cl->s.stream.notify_read = client_read_cb;
@@ -861,6 +891,8 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 		apl->cltaddr = cl;
   }
 	apl->online = ON;
+	gettime(&apl->last_tv);
+
 	if ((headlen = sproto_header_parser(data, len, &apl->ud, unpack)) <= 0){
     print_debug_log ("[debug] [error] [sproto header parser failed!!]\n");
     return -1;
@@ -1022,6 +1054,16 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_list *ap)
 	if (buf == NULL || ap == NULL)
 		return;
 	blobmsg_add_string (buf, "name", ap->apname);
+
+	if (ap->online != OFF) {
+		struct timeval tv;
+		gettime(&tv);
+		long td = tv_diff(&tv, &ap->last_tv);
+		if (td > 30000) {// 30s
+			print_debug_log ("[debug] set offline for lost heartbeat %lu\n", td);
+			ap->online = OFF;
+		}
+	}
   blobmsg_add_u32 (buf, "online", ap->online);
   blobmsg_add_string (buf, "mac", ap->apinfo.apmac);
   blobmsg_add_string (buf, "sn", ap->apinfo.sn);

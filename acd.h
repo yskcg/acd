@@ -183,6 +183,7 @@ typedef struct ap_info
 {
 	int fd;
 	bool online;
+	struct timeval last_tv;
 	int apid,
 			len;
 	char *stamac,
