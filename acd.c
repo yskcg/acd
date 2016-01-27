@@ -1209,7 +1209,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
   {
 		if(strcasecmp("auto", channel) != 0)
 		{
-			if (atoi(channel) > 11 || atoi(channel) < 3)
+			if (atoi(channel) > 13 || atoi(channel) < 1)
 			{
 				blobmsg_add_string (&b, "msg", "channel invalid!");
 				goto error;
