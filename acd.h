@@ -143,6 +143,7 @@ struct sproto {
 
 struct client {
 	struct sockaddr_in sin;
+	struct sockaddr_in localaddr;
 
 	struct ustream_fd s;
 	int ctr;

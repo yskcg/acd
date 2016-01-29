@@ -7,7 +7,6 @@ tmplat_list *tplist = NULL;
 static const char *port = "4444";
 static struct sproto *spro_new = NULL;	//the protocol
 static FILE *debug = NULL;
-char rip[20] = { 0 };
 #define MAC_LEN			100
 
 void print_debug_log (const char *form, ...);
@@ -21,7 +20,7 @@ void format_tmp_cfg (tmplat_list * tpcfg, char *res);
 int proc_tmplate_info (tmplat_list * tpcfg, struct ubus_request_data *req);
 int send_data_to_ap (ap_list * ap);
 int rcv_and_proc_data (char *data, int len, struct client *cl);
-int ap_online_proc (ap_list * ap, int sfd);
+int ap_online_proc (ap_list * ap, int sfd, struct sockaddr_in localaddr);
 void free_mem(ap_list *ap);
 
 
@@ -287,6 +286,9 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
     return;
   }
 
+	sl = sizeof (struct sockaddr_in);
+	getsockname(sfd, (struct sockaddr *)&cl->localaddr, &sl);
+
 	timeout.tv_sec  = 5;
 	timeout.tv_usec = 0;
 	setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
@@ -301,7 +303,7 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
 
   ustream_fd_init (&cl->s, sfd);
   next_client = NULL;
-	print_debug_log("[debug] [New connection] [ip:%s, fd:%d]\n", inet_ntoa(cl->sin.sin_addr), sfd);
+  print_debug_log("[debug] [New connection] [ip:%s -> %s, fd:%d]\n", inet_ntoa(cl->sin.sin_addr), inet_ntoa(cl->localaddr.sin_addr), sfd);
 }
 
 void aplist_init(void)
@@ -424,39 +426,6 @@ void tplist_init(void)
   return;
 }
 
-#ifdef MW200H
-int get_loca_ip(void)
-{
-  int sockfd;
-  char *ptr, buf[2048], addrstr[INET_ADDRSTRLEN];
-  struct ifconf ifc;
-  struct ifreq *ifr;
-  struct sockaddr_in *sinptr;
-  sockfd = socket (AF_INET, SOCK_DGRAM, 0);
-  ifc.ifc_len = sizeof (buf);
-  ifc.ifc_req = (struct ifreq *) buf;
-  ioctl (sockfd, SIOCGIFCONF, &ifc);
-  for (ptr = buf; ptr < buf + ifc.ifc_len; ptr += sizeof (struct ifreq))
-	{
-		ifr = (struct ifreq *) ptr;
-		switch (ifr->ifr_addr.sa_family)
-			{
-			case AF_INET:
-				sinptr = (struct sockaddr_in *) &ifr->ifr_addr;
-				if (strcasecmp(ifr->ifr_name, "eth0") == 0){
-					strcpy(rip, inet_ntop(AF_INET, &sinptr->sin_addr, addrstr, sizeof(addrstr)));
-					rip[strlen (rip)] = 0;
-				}
-				break;
-			default:
-				break;
-		}
-	}
-  close (sockfd);
-  return 1;
-}
-#else
-
 static const struct blobmsg_policy lan_policy[__CFG_MAX] = {
 	[IPADDR] = { .name = "ipv4-address", .type = BLOBMSG_TYPE_ARRAY},
 };
@@ -465,39 +434,7 @@ static const struct blobmsg_policy ip_policy[__CFG_MAX] = {
 	[ADDR] = { .name = "address", .type = BLOBMSG_TYPE_STRING},
 };
 
-static void acd_ubus_cb(struct ubus_request *req, int type, struct blob_attr *msg)
-{
-	struct blob_attr *tb[__CFG_MAX], *attr;
-	int len;
 
-	blobmsg_parse(lan_policy, __CFG_MAX, tb, blobmsg_data(msg), blobmsg_data_len(msg));
-	if (!tb[IPADDR]) {
-		fprintf(stderr, "No return code received from server\n");
-		return;
-	}
-	blobmsg_for_each_attr(attr, tb[IPADDR], len)
-	{
-		blobmsg_parse(ip_policy, __CFG_MAX, tb, blobmsg_data(attr), blobmsg_data_len(attr));
-		if (tb[ADDR])
-		{
-			sprintf(rip, "%s", blobmsg_get_string(tb[ADDR]));
-			return;
-		}
-	}
-}
-
-int get_loca_ip(void)
-{
-	uint32_t id;
-
-	if (ubus_lookup_id(ctx, "network.interface.lan", &id)) {
-		return -1;
-	}
-
-	ubus_invoke(ctx, id, "status", NULL, acd_ubus_cb, NULL, 5000);
-	return 0;
-}
-#endif
 int memcat(char *res, char *buf, int slen, int len)
 {
   int i;
@@ -650,8 +587,6 @@ void fill_data(ap_list *apcfg, char *tagname, char *value, int len)
     strncpy (apcfg->apinfo.aip, value, len);
   else if (strcasecmp (tagname, "mac") == 0)
     strncpy (apcfg->apinfo.apmac, value, len);
-  else if (strcasecmp (tagname, "rip") == 0)
-    strncpy (apcfg->apinfo.rip, rip, len);
   else if (strcasecmp (tagname, "channel") == 0)
     strncpy (apcfg->apinfo.channel, value, len);
   else if (strcasecmp (tagname, "id") == 0)
@@ -808,7 +743,7 @@ void free_mem(ap_list *ap)
 	return;
 }
 
-int ap_online_proc(ap_list *ap, int sfd)
+int ap_online_proc(ap_list * ap, int sfd, struct sockaddr_in localaddr)
 {
   ap_list *apl = NULL;
   tmplat_list *tp = NULL;
@@ -844,7 +779,7 @@ int ap_online_proc(ap_list *ap, int sfd)
 		strcpy (apl->apinfo.encrypt, tp->encrypt);
 		strcpy (apl->apinfo.key, tp->key);
 		strcpy (apl->apinfo.id, "0");
-		strcpy (apl->apinfo.rip, rip);
+		strcpy (apl->apinfo.rip, inet_ntoa(localaddr.sin_addr));
 	}
 	else
 	{
@@ -921,7 +856,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
   }
   else if (status && apl->ud.session == SPROTO_REQUEST)
   {
-		return ap_online_proc (apl, cl->s.fd.fd);
+		return ap_online_proc (apl, cl->s.fd.fd, cl->localaddr);
   }
   apl->ud.session = SPROTO_RESPONSE;
   apl->ud.ok = RESPONSE_OK;
@@ -1029,7 +964,6 @@ void format_ap_cfg(ap_list *apinfo, char *res)
   sprintf (tbuf + strlen (tbuf), "|txpower=%s", apinfo->apinfo.txpower);
   sprintf (tbuf + strlen (tbuf), "|hver=%s", apinfo->apinfo.hver);
   sprintf (tbuf + strlen (tbuf), "|sver=%s", apinfo->apinfo.sver);
-  sprintf (tbuf + strlen (tbuf), "|rip=%s", apinfo->apinfo.rip);
   sprintf (tbuf + strlen (tbuf), "|aip=%s", apinfo->apinfo.aip);
   sprintf (tbuf + strlen (tbuf), "|channel=%s", apinfo->apinfo.channel);
   strncpy (res, tbuf, strlen (tbuf));
@@ -1793,11 +1727,6 @@ void acd_init(void)
 		system ("touch /etc/tplist");
 	}
 
-	while(is_ip(rip) <= 0)
-	{
-		get_loca_ip ();
-		sleep(2);
-	}
   tplist_init ();
   aplist_init ();
   return;
