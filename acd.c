@@ -20,7 +20,7 @@ void format_tmp_cfg (tmplat_list * tpcfg, char *res);
 int proc_tmplate_info (tmplat_list * tpcfg, struct ubus_request_data *req);
 int send_data_to_ap (ap_list * ap);
 int rcv_and_proc_data (char *data, int len, struct client *cl);
-int ap_online_proc (ap_list * ap, int sfd, struct sockaddr_in localaddr);
+int ap_online_proc (ap_list * ap, int sfd, struct sockaddr_in *localaddr);
 void free_mem(ap_list *ap);
 
 
@@ -743,7 +743,7 @@ void free_mem(ap_list *ap)
 	return;
 }
 
-int ap_online_proc(ap_list * ap, int sfd, struct sockaddr_in localaddr)
+int ap_online_proc(ap_list * ap, int sfd, struct sockaddr_in *localaddr)
 {
   ap_list *apl = NULL;
   tmplat_list *tp = NULL;
@@ -779,7 +779,7 @@ int ap_online_proc(ap_list * ap, int sfd, struct sockaddr_in localaddr)
 		strcpy (apl->apinfo.encrypt, tp->encrypt);
 		strcpy (apl->apinfo.key, tp->key);
 		strcpy (apl->apinfo.id, "0");
-		strcpy (apl->apinfo.rip, inet_ntoa(localaddr.sin_addr));
+		strcpy (apl->apinfo.rip, inet_ntoa(localaddr->sin_addr));
 	}
 	else
 	{
@@ -856,7 +856,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
   }
   else if (status && apl->ud.session == SPROTO_REQUEST)
   {
-		return ap_online_proc (apl, cl->s.fd.fd, cl->localaddr);
+		return ap_online_proc (apl, cl->s.fd.fd, &cl->localaddr);
   }
   apl->ud.session = SPROTO_RESPONSE;
   apl->ud.ok = RESPONSE_OK;
@@ -1682,17 +1682,17 @@ static void server_main(void)
   return;
 }
 
-static int run_server(void)
+static void run_server(void)
 {
-  server.cb = server_cb;
+	server.cb = server_cb;
 	server.fd = usock(USOCK_TCP | USOCK_SERVER | USOCK_IPV4ONLY | USOCK_NUMERIC, "0.0.0.0", port);
 	if (server.fd < 0) {
-    run_server();
+		fprintf (stderr, "Failed to listen on port %s\n", port);
 		sleep(3);
-  }
-  uloop_fd_add (&server, ULOOP_READ | ULOOP_WRITE);
-
-  return 0;
+		run_server();
+		return;
+	}
+	uloop_fd_add (&server, ULOOP_READ | ULOOP_WRITE);
 }
 
 static int usage(char *prog)
