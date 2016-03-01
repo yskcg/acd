@@ -287,7 +287,8 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
   }
 
 	sl = sizeof (struct sockaddr_in);
-	getsockname(sfd, (struct sockaddr *)&cl->localaddr, &sl);
+	if (getsockname(sfd, (struct sockaddr *)&cl->localaddr, &sl) != 0)
+		print_debug_log("[debug] getsockname errno: %s\n", errno);
 
 	timeout.tv_sec  = 5;
 	timeout.tv_usec = 0;
@@ -303,7 +304,8 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
 
   ustream_fd_init (&cl->s, sfd);
   next_client = NULL;
-  print_debug_log("[debug] [New connection] [ip:%s -> %s, fd:%d]\n", inet_ntoa(cl->sin.sin_addr), inet_ntoa(cl->localaddr.sin_addr), sfd);
+  print_debug_log("[debug] [New connection] [local ip:%s]\n", inet_ntoa(cl->localaddr.sin_addr));
+  print_debug_log("[debug] [New connection] [peer ip:%s fd:%d]\n", inet_ntoa(cl->sin.sin_addr), sfd);
 }
 
 void aplist_init(void)
@@ -788,6 +790,7 @@ int ap_online_proc(ap_list * ap, int sfd, struct sockaddr_in *localaddr)
 		strcpy (apl->apinfo.model, ap->apinfo.model);
 		strcpy (apl->apinfo.hver, ap->apinfo.hver);
 		strcpy (apl->apinfo.sver, ap->apinfo.sver);
+		strcpy (apl->apinfo.rip, inet_ntoa(localaddr->sin_addr));
 		struct client *cl = apl->cltaddr;
 		if (cl != NULL)
 		{
