@@ -19,40 +19,61 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <linux/random.h>
+#include <linux/rculist.h>
+#include <linux/list.h>
+#include <linux/netdevice.h>
+#include <linux/etherdevice.h>
 
-#ifdef MW200H
-#include "libubus.h"
-#include "libubox/ustream.h"
-#include "libubox/uloop.h"
-#include "libubox/usock.h"
-#include "libubox/blobmsg_json.h"
-#else
 #include <uci.h>
 #include <libubus.h>
 #include <libubox/ustream.h>
 #include <libubox/uloop.h>
 #include <libubox/usock.h>
 #include <libubox/blobmsg_json.h>
-#endif
 #include "sproto.h"
 #include "rw.h"
 
-#define SIZEOF_LENGTH 4
-#define ENCODE_BUFFERSIZE 2050
-#define ENCODE_MAXSIZE 0x1000000
-#define ENCODE_DEEPLEVEL 64
-#define BUFLEN 1024 * 2
-#define INET_ADDRSTRLEN 16
-#define AP_STATUS				1
-#define AP_INFO				  2
-#define AP_CMD					3
-#define RESPONSE_ERROR	0
-#define RESPONSE_PACK	  0
-#define RESPONSE_OK		  1
-#define ON						  1
-#define OFF						  0
-#define REBOOT  				1
-#define UPGRADE				  2
+#define SIZEOF_LENGTH 		4
+#define ENCODE_BUFFERSIZE 	2050
+#define ENCODE_MAXSIZE		0x1000000
+#define ENCODE_DEEPLEVEL 	64
+#define BUFLEN 				1024 * 2
+#define INET_ADDRSTRLEN 	16
+#define AP_STATUS			1
+#define AP_INFO				2
+#define AP_CMD				3
+#define RESPONSE_ERROR		0
+#define RESPONSE_PACK	  	0
+#define RESPONSE_OK		  	1
+#define ON					1
+#define OFF					0
+#define REBOOT  			1
+#define UPGRADE				2
+#define AP_HASH_SIZE 		(1<<8)
+#define MAC_LEN				100
+#define AP_LIST_LINE_NUMBER 1
+
+#define AP_LIST_FILE        "/etc/aplist"
+#define TP_LIST_FILE		"/etc/tplist"
+#define APC_SP_FILE			"/usr/share/apc.sp"
+
+
+extern struct kmem_cache *ap_list_cache __read_mostly;
+extern u32 ap_listdb_salt __read_mostly;
+
+void print_debug_log (const char *form, ...);
+void fill_data (ap_list * apcfg, char *tagname, char *value, int len);
+void fill_encode_data (ap_list * apcfg, char *tagname, char *value);
+void format_ap_cfg (ap_list * apinfo, char *res);
+void format_tmp_cfg (tmplat_list * tpcfg, char *res);
+void free_mem(ap_list *ap);
+int sproto_read_entity (char *filename);
+int sproto_encode_data (struct encode_ud *ud, char *res);
+int proc_tmplate_info (tmplat_list * tpcfg, struct ubus_request_data *req);
+int send_data_to_ap (ap_list * ap);
+int rcv_and_proc_data (char *data, int len, struct client *cl);
+int ap_online_proc (ap_list * ap, int sfd, struct sockaddr_in *localaddr);
 
 
 #ifndef container_of
@@ -102,12 +123,6 @@ enum {
 	__STA_MAX
 };
 
-struct field {
-	int tag;
-	int type;
-	const char * name;
-	struct sproto_type * st;
-};
 
 struct sproto_type {
 	const char * name;
@@ -115,6 +130,13 @@ struct sproto_type {
 	int base;
 	int maxn;
 	struct field *f;
+};
+
+struct field {
+	int tag;
+	int type;
+	const char * name;
+	struct sproto_type * st;
 };
 
 struct protocol {
@@ -149,63 +171,77 @@ struct client {
 	int ctr;
 };
 
-typedef struct ap_cfg_info
-{
-	char id[20],
-	 		 ssid[200],
-			 channel[5],
-			 encrypt[50],
-			 hver[30],
-			 sver[30],
-			 key[300],
-			 rip[20],
-			 aip[20],
-			 txpower[5],
-			 apmac[20],
-			 sn[20],
-			model[30];
-}ApCfgInfo;
+type struct {
+	char ssid[128];				//AP 对应的ssid
+	char key[128];				//AP 对应无线密码
+	char encrypt[64];			//AP 对应的无线加密方式
+}ap_ssid_info;
 
-typedef struct
-{
-	char addr[50],
-			 md5[36];
-	int  cmd,
-			 status;
-}apcmd;
+type struct  {
+	char channel;					//AP 对应的无线信道
+	char txpower;					//AP 对应无线的功率
+	ap_ssid_info ssid_info;
+}ap_wifi_info;
+
+typedef struct ap_info {
+	char id;						//表示对应模板id
+	char hver[32];					//AP 对应的硬件版本号
+	char sver[32];					//AP 对应的软件版本号	
+	char rip[16];					//AP ac 服务器的ip地址
+	char aip[16];					//AP 自身的ip 地址	
+	char apmac[6];					//AP 对应AP的mac 地址
+	char sn[32];					//AP 对应设备的sn 序号
+	char model[32];					//AP 对应设备的型号
+	struct ap_wifi_info wifi_info;
+}ap_sys_info;
+
+typedef struct {
+	char	addr[32];
+	char	md5[36];
+	int 	cmd;
+	int		status;
+}ap_cmd;
 
 typedef struct encode_ud {
-	int type,
-	    session,
-	    ok;
-}EncdUd;
+	int	type;
+	int session,
+	int ok;
+}ecode_ud_spro;
 
-typedef struct ap_info
-{
-	int fd;
-	bool online;
-	struct timeval last_tv;
-	int apid,
-			len;
-	char *stamac,
-		 		apname[50];
-	EncdUd ud;
+typedef struct ap_info {
+	struct hlist_node	hlist;
+	
+	char 	status;					//用来处理是否走上线流程,0：ac 初始化时，未上线；1：新建hash node；2：上线
+	bool 	online;					//标识ap 设备是否在线
+	
+	int		fd;
+	int 	apid;					//用于标示 在aplist 文件中ap_cfg_x 的number
+	int		len;
+	
+	ap_cmd 				cmd;
+	ecode_ud_spro 		ud;
+	ap_sys_info 		apinfo;
+	struct timeval 		last_tv;
+	struct client *		client_addr;
+	char *				apname[128];//AP 别名
+	char *				stamac;		//该AP 下的用户终端mac 地址
+}ap_status_entry;
 
-	apcmd cmd;
-	ApCfgInfo apinfo;
-	struct client *cltaddr;
-	struct ap_info *rlink;
-	struct ap_info *llink;
-
+typedef struct {
+	struct hlist_head		hash[AP_HASH_SIZE];
 }ap_list;
+
 
 typedef struct tmplat_list
 {
-	char tpname[50],
-			 ssid[50],
-			 id[5],
-			 encrypt[50],
-			 key[30];
+	char 	tpname[50];
+	char	ssid_auth[50]; 			//auth-wifi
+	char 	ssid_guest[50];			//guest-wifi
+	char	id[5];					//模板id号
+	char	encrypt_auth[50];		//auth-wifi 加密方式
+	char 	encrypt_guest[50];		//guest-wifi 加密方式
+	char	key_auth[30];			//auth-wifi 密码
+	char 	key_guest[30];			//guest-wifi 密码
 	struct tmplat_list *rlink;
 	struct tmplat_list *llink;
 }tmplat_list;
