@@ -209,6 +209,7 @@ ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8 *addr)
 		memcpy(aplist_node->apinfo.apmac, addr, ETH_ALEN);
 		aplist_node->status = 1;
 		hlist_add_head(&aplist_node->hlist, head);
+		aplist_node->apinfo.apmac[strlen(addr)+1] = '\0';
 	}
 	return aplist_node;
 }
@@ -251,7 +252,7 @@ ap_status_entry *aplist_entry_find(struct hlist_head *head, u8 *addr)
 	}
 	
 	hlist_for_each_entry(aplist_node, head, hlist) {
-		if (ether_addr_equal(aplist_node->apinfo.apmac, addr)){
+		if (strncmp(aplist_node->apinfo.apmac,addr,strlen(addr)) == 0){
 			return aplist_node;
 		}
 	}

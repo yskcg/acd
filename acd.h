@@ -13,7 +13,7 @@
 
 extern tmplat_list *tplist;
 extern ap_list aplist;
-extern int ap_listdb_salt;
+extern u32 ap_listdb_salt;
 
 void print_debug_log (const char *form, ...);
 void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len);

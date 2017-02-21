@@ -187,7 +187,7 @@ typedef struct {
     struct hlist_node	hlist;
     
     char 	status;					//用来处理是否走上线流程,0：ac 初始化时，未上线；1：新建hash node；2：上线
-    bool 	online;					//标识ap 设备是否在线
+    char 	online;					//标识ap 设备是否在线
     
     int		fd;
     int 	apid;					//用于标示 在aplist 文件中ap_cfg_x 的number
@@ -197,9 +197,9 @@ typedef struct {
     ecode_ud_spro 		ud;
     ap_sys_info 		apinfo;
     struct timeval 		last_tv;
-    struct client *		client_addr;
+    struct client 		*client_addr;
     char			    apname[128];//AP 别名
-    char *			    stamac;		//该AP 下的用户终端mac 地址
+    char 			    *stamac;		//该AP 下的用户终端mac 地址
 }ap_status_entry;
 
 typedef struct {

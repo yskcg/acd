@@ -7,10 +7,10 @@ static struct client 		*next_client = NULL;
 static struct sproto 		*spro_new = NULL;	//the protocol
 static struct ubus_context *ctx;
 
-int ap_listdb_salt;
+u32 ap_listdb_salt;
 ap_list aplist;	//ap information list
 tmplat_list *tplist 	= NULL;
-static ap_status_entry *p_temp_ap_info = NULL;
+static ap_status_entry p_temp_ap_info;
 
 static void gettime(struct timeval *tv)
 {
@@ -128,10 +128,10 @@ void aplist_init(void)
 {
 	
 	int file_size;
-	char buf[512] = {0};
+	char buf[512] = {'\0'};
 	char *p_buf = NULL;
-	char key[32] = {0};
-	char value[64] = {0};
+	char key[32] = {'\0'};
+	char value[128] = {'\0'};
 	char *p_key_value = NULL;
 	char *optstr = NULL;
 	tmplat_list *tp = NULL;
@@ -164,15 +164,16 @@ void aplist_init(void)
 	/*get the aplist file content*/
 	while((fgets(buf,512,fp))!=NULL){
 		/*get the mac address of ap*/
+		if (!(strlen(buf) <=1 && buf[0] ==10)){ //排除文件换行无内容情况
 		p_buf = buf;
 			
 		p_key_value = strtok(p_buf,"|");
 		while(p_key_value){
-			bzero (key, sizeof (key));
-			bzero (value, sizeof (value));
+				memset(key,'\0',sizeof(key));
+				memset(value ,'\0',sizeof(value));
 			optstr = strstr (p_key_value, "=");
 			strncpy (key, p_key_value, optstr - p_key_value);
-			strcpy (value, optstr + 1);
+				strncpy (value, optstr + 1,strlen(optstr)-1);
 			
 			/*creat or find the hash node*/
 			if ((strcasecmp(key,"mac") == 0)&&strlen(value) > 0){
@@ -181,7 +182,7 @@ void aplist_init(void)
 			}
 			/*fill data in the hash node*/
 			if ( ap ){
-				ap->status = 0;
+					ap->status = 0;    //init the aplist  set the status to zero
 				fill_data (ap, key, value, strlen (value));
 			}else{
 				break;
@@ -198,8 +199,9 @@ void aplist_init(void)
 			memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));
 		}
 		
-		memset(buf,0,sizeof(512));
+			memset(buf,'\0',sizeof(512));
 		ap = NULL ;
+		}	
 	}
 	
 	return ;
@@ -619,20 +621,27 @@ int ap_online_proc(ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr)
 		if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL && ap){
 			ap->apinfo.id = tp->id;
 			memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));
-			
-			strcpy (ap->apname, "");
-			strcpy (ap->apinfo.wifi_info.channel, "auto");
-			strcpy (ap->apinfo.wifi_info.txpower, "18");
-			strcpy (ap->apinfo.rip, inet_ntoa(localaddr->sin_addr));
 		}
 		
 		if ((tp = find_template (DEFAULT_TMP_GUEST_ID)) != NULL && ap){
 			ap->apinfo.id_guest = tp->id;
 			memcpy(&(ap->apinfo.wifi_info.ssid_info_guest),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));	
 		}
-		
 	}
 	
+	if (strlen(ap->apinfo.wifi_info.channel) <1){
+		strcpy (ap->apinfo.wifi_info.channel, "auto");
+	}
+	
+	if (strlen(ap->apinfo.wifi_info.txpower) <1){
+		strcpy (ap->apinfo.wifi_info.txpower, "18");
+	}
+	
+	if (strlen(ap->apname) <1){
+		strcpy (ap->apname, "");
+	}
+	
+	strcpy (ap->apinfo.rip, inet_ntoa(localaddr->sin_addr));
 	ap->status = 2;
 	format_ap_cfg (ap, res);
 	sprintf(index,"mac=%s",ap->apinfo.apmac);
@@ -640,25 +649,28 @@ int ap_online_proc(ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr)
 	ap->ud.type = AP_INFO;
 	ap->ud.session = SPROTO_REQUEST;
 	len = send_data_to_ap (ap);
+	print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 	
 	return len;
 }
 
 int rcv_and_proc_data(char *data, int len, struct client *cl)
 {
-	int slen, headlen, status = 0;
+	int slen;
+	int headlen;
+	int status = 0;
 	char unpack[1024 * 6] = { 0 };
 	struct client *p_cltaddr =NULL;
 	ap_status_entry *apl = NULL, *ap = NULL;
 	
 	print_debug_log ("[debug] [rcv] [data len:%d, fd:%d]\n", len, cl->s.fd.fd);
 	
-	apl = p_temp_ap_info;
+	apl = &p_temp_ap_info;
 	apl->client_addr = cl;
 	apl->online = ON;
 	
 	/*sproto header parse：type and session*/
-	if ((headlen = sproto_header_parser(data, len, &apl->ud, unpack)) <= 0){
+	if ((headlen = sproto_header_parser(data, len, &(apl->ud), unpack)) <= 0){
 		print_debug_log ("[debug] [error] [sproto header parser failed!!]\n");
 		return -1;
 	}
@@ -719,7 +731,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 		slen = send_data_to_ap (ap);
 		
 		return ACd_STATUS_OK;
-	}else if (status && ap->ud.session == SPROTO_REQUEST){
+	}else if (status ==1  && ap->ud.session == SPROTO_REQUEST){
 		return ap_online_proc (ap, cl->s.fd.fd, &cl->localaddr);
 	}
 	
@@ -932,7 +944,9 @@ static int ubus_proc_apinfo(struct ubus_context *ctx, struct ubus_object *obj,
 	char *table = NULL;
 	struct hlist_head *head = NULL;
 	struct blob_buf b;
-
+	
+	blob_buf_init (&b, 0);
+	print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 	blobmsg_parse(apinfo_policy, ARRAY_SIZE(apinfo_policy), tb, blob_data(msg), blob_len(msg));
 	blob_buf_init (&b, 0);
 	
@@ -1704,25 +1718,7 @@ int aplist_hash_init(void)
 
 ap_status_entry * aplist_entry_init(ap_status_entry * aplist_node)
 {
-	ap_status_entry *p = NULL;
-	
-	if ( aplist_node == NULL ){
-		p = (ap_status_entry *) malloc (sizeof (*p));
-		
-		if (p == NULL){
-			return NULL;
-		}
-	}else{
-		p = aplist_node;
-	}
-
-	memset(p, 0, sizeof(ap_list));
-	INIT_HLIST_NODE(&(p->hlist));
-	p->stamac = NULL;
-	p->client_addr = NULL;
-	p->len = 0;
-	
-	return p;
+	memset(&aplist_node,0,sizeof(ap_status_entry));
 }
 
 void acd_init(void)
