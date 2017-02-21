@@ -1,8 +1,10 @@
 #ifndef _LINUX_JHASH_H
 #define _LINUX_JHASH_H
 
+#define u16 unsigned short
 #define u32 unsigned int
 #define u8  char
+#define u8_t unsigned char 
 
 /* jhash.h: Jenkins hash support.
  *

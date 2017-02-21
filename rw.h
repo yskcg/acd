@@ -3,18 +3,60 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <endian.h>
 #include <string.h>
 #include <unistd.h>
-#include "acd.h"
 #include "jhash.h"
+#include "list.h"
+#include "etherdevice.h"
+#include "random.h"
+#include "info.h"
+#include "acd.h"
 
-
-int write_apinfo(char *fname, char *tagname, char *value);
-char *read_apinfo(char *fname, char *tagname, char *value);
-void del_apinfo(char *fname, char *tagname);
-ap_status_entry *aplist_entry_find(struct hlist_head *head, const unsigned char *addr，const char *sn);
-ap_status_entry *aplist_entry_creat((struct hlist_head *head,ap_sys_info *p_ap_data));
-int aplist_entry_insert(ap_sys_info *p_ap_data);
+#if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN
+# define BB_BIG_ENDIAN 1
+# define BB_LITTLE_ENDIAN 0
+#elif defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN
+# define BB_BIG_ENDIAN 0
+# define BB_LITTLE_ENDIAN 1
+#elif defined(_BYTE_ORDER) && _BYTE_ORDER == _BIG_ENDIAN
+# define BB_BIG_ENDIAN 1
+# define BB_LITTLE_ENDIAN 0
+#elif defined(_BYTE_ORDER) && _BYTE_ORDER == _LITTLE_ENDIAN
+# define BB_BIG_ENDIAN 0
+# define BB_LITTLE_ENDIAN 1
+#elif defined(BYTE_ORDER) && BYTE_ORDER == BIG_ENDIAN
+# define BB_BIG_ENDIAN 1
+# define BB_LITTLE_ENDIAN 0
+#elif defined(BYTE_ORDER) && BYTE_ORDER == LITTLE_ENDIAN
+# define BB_BIG_ENDIAN 0
+# define BB_LITTLE_ENDIAN 1
+#elif defined(__386__)
+# define BB_BIG_ENDIAN 0
+# define BB_LITTLE_ENDIAN 1
+#else
+# error "Can't determine endianness"
 #endif
+
+/*file operation API*/
+extern int file_write(char *fname, char *tagname, char *value);
+extern char *file_read(char *fname, char *tagname, char *value);
+extern int file_spec_content_del(char *fname, char *index);
+
+/*list API*/
+extern tmplat_list *find_template(char id);
+extern void del_apmember(char *mac, char *sn);
+extern void del_template(tmplat_list *h, char id);
+extern int insert_template(tmplat_list *s);
+extern tmplat_list *create_tplist(void);
+
+/*hash API*/
+extern ap_status_entry *aplist_entry_find(struct hlist_head *head, u8 *addr);
+extern ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8 *addr);
+extern ap_status_entry *aplist_entry_insert(u8 *addr);
+extern void * aplist_entry_remove(u8 *addr);
+extern int aplist_entry_hash(u8 *addr);
+#endif
+
 
 
