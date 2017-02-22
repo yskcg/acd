@@ -92,6 +92,11 @@ enum {
 };
 
 enum {
+    APINFO_MAC,
+    __APINFO_MAX
+};
+
+enum {
     STAMAC,
     __STA_MAX
 };
@@ -158,15 +163,15 @@ typedef struct  {
 }ap_wifi_info;
 
 typedef struct ap_info {
-    char id;					    //表示对应认证、自定义模板id
-    char id_guest;                  //表示对应访客模板id
-    char hver[32];					//AP 对应的硬件版本号
-    char sver[32];					//AP 对应的软件版本号	
-    char rip[16];					//AP ac 服务器的ip地址
-    char aip[16];					//AP 自身的ip 地址	
-    char apmac[32];					//AP 对应AP的mac 地址
-    char sn[64];					//AP 对应设备的sn 序号
-    char model[32];					//AP 对应设备的型号
+    char id;					        //表示对应认证、自定义模板id
+    char id_guest;                      //表示对应访客模板id
+    char hver[32];					    //AP 对应的硬件版本号
+    char sver[32];					    //AP 对应的软件版本号	
+    char rip[16];					    //AP ac 服务器的ip地址
+    char aip[16];					    //AP 自身的ip 地址	
+    unsigned char apmac[6];				//AP 对应AP的mac 地址
+    char sn[64];					    //AP 对应设备的sn 序号
+    char model[32];					    //AP 对应设备的型号
     ap_wifi_info wifi_info;
 }ap_sys_info;
 

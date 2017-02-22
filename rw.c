@@ -186,9 +186,15 @@ static inline u32  get_unaligned_32(const u8_t *buf)
 
 int aplist_entry_hash(u8 *addr)
 {
+	u32 hash_value;
+	
 	/* use 1 byte of OUI and 3 bytes of NIC */
 	u32 key = get_unaligned_32((const u8_t *)(addr + 2));
-	return jhash_1word(key, ap_listdb_salt) & (AP_HASH_SIZE - 1);
+	hash_value = jhash_1word(key, ap_listdb_salt) & (AP_HASH_SIZE - 1);
+	print_debug_log("hash_value:%d,salt:%d,key:%d,addr:0x%2x:0x%2x:0x%2x:0x%2x:0x%2x:0x%2x\n",hash_value,ap_listdb_salt,key,\
+		addr[0]&0xff,addr[1]&0xff,addr[2]&0xff,addr[3]&0xff,addr[4]&0xff,addr[5]&0xff);
+	
+	return hash_value;
 }
 
 ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8 *addr)
@@ -251,8 +257,9 @@ ap_status_entry *aplist_entry_find(struct hlist_head *head, u8 *addr)
 		return NULL;
 	}
 	
-	hlist_for_each_entry(aplist_node, head, hlist) {
-		if (strncmp(aplist_node->apinfo.apmac,addr,strlen(addr)) == 0){
+	hlist_for_each_entry(aplist_node, head, hlist) {		
+		if (ether_addr_equal(aplist_node->apinfo.apmac,addr)){
+			print_debug_log("%s,%d,0x%2x:0x%2x:0x%2x:0x%2x:0x%2x:0x%2x\n\n",__FUNCTION__,__LINE__,addr[0]&0xff,addr[1]&0xff,addr[2]&0xff,addr[3]&0xff,addr[4]&0xff,addr[5]&0xff);
 			return aplist_node;
 		}
 	}
