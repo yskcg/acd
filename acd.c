@@ -206,8 +206,13 @@ void aplist_init(void)
 				}
 				p_key_value = strtok (NULL, "|");
 			}
+
 			/*find the aplist id <-> tmplate id,if id not exist,use default tmplate,else use tmplate id*/
-			if ((tp = find_template(ap->apinfo.id)) !=NULL && ap){
+			if (ap == NULL){
+				break;
+			}
+
+			if ((tp = find_template(ap->apinfo.id)) != NULL && ap){
 				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));
 			}else if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL && ap){
 				ap->apinfo.id = tp->id;
@@ -463,6 +468,7 @@ void fill_encode_data(ap_status_entry *apcfg, char *tagname, char *value)
 void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 {
 	int slen = 0;
+	unsigned char mac_value[ETH_ALEN] = {0};
 	
 	if (apcfg == NULL || strlen (value) == 0 || len == 0){
 		return;
@@ -479,7 +485,8 @@ void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 	}else if (strcasecmp (tagname, "aip") == 0){
 		strncpy (apcfg->apinfo.aip, value, len);
 	}else if (strcasecmp (tagname, "mac") == 0){
-		strncpy ((char *)apcfg->apinfo.apmac, value, len);
+		mac_string_to_value((unsigned char *)value,mac_value);	
+		memcpy(apcfg->apinfo.apmac, mac_value, ETH_ALEN);
 	}else if (strcasecmp (tagname, "channel") == 0){
 		strncpy (apcfg->apinfo.wifi_info.channel, value, len);
 	}else if (strcasecmp (tagname, "id") == 0){
