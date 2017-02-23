@@ -678,13 +678,21 @@ int ap_online_proc(ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr)
 	strcpy (ap->apinfo.rip, inet_ntoa(localaddr->sin_addr));
 	ap->status = 2;
 	format_ap_cfg (ap, res);
-	sprintf(index,"mac=%s",ap->apinfo.apmac);
+
+	sprintf(index,"mac=%02x:%02x:%02x:%02x:%02x:%02x",\
+		ap->apinfo.apmac[0]&0xff,\
+		ap->apinfo.apmac[1]&0xff,\
+		ap->apinfo.apmac[2]&0xff,\
+		ap->apinfo.apmac[3]&0xff,\
+		ap->apinfo.apmac[4]&0xff,\
+		ap->apinfo.apmac[5]&0xff);
 	file_write(AP_LIST_FILE, index, res);
+
 	ap->ud.type = AP_INFO;
 	ap->ud.session = SPROTO_REQUEST;
 	len = send_data_to_ap (ap);
 	print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
-	
+
 	return len;
 }
 
