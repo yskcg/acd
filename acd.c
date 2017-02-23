@@ -31,15 +31,15 @@ static int tv_diff(struct timeval *t1, struct timeval *t2)
 
 }
 
-static void mac_string_to_value(char *mac,unsigned char *buf)
+static void mac_string_to_value(unsigned char *mac,unsigned char *buf)
 {
     int i;
     int len;
 
 	if(mac && buf){
-		len = strlen(mac);
+		len = strlen((const char *)mac);
 		for (i=0;i<(len-5)/2;i++){
-			sscanf(mac+i*3,"%2x",&buf[i]);     
+			sscanf((const char *)mac+i*3,"%2x",&buf[i]);
 		}
 	}
 }
@@ -193,7 +193,7 @@ void aplist_init(void)
 				/*creat or find the hash node*/
 				if ((strcasecmp(key,"mac") == 0)&&strlen(value) > 0){
 					/*dele the ':' and make string to int*/
-					mac_string_to_value(value,mac);
+					mac_string_to_value((unsigned char *)value,mac);
 					/*for_each to find hash node*/
 					ap = aplist_entry_insert(mac);
 				}
@@ -206,7 +206,6 @@ void aplist_init(void)
 				}
 				p_key_value = strtok (NULL, "|");
 			}
-			
 			/*find the aplist id <-> tmplate id,if id not exist,use default tmplate,else use tmplate id*/
 			if ((tp = find_template(ap->apinfo.id)) !=NULL && ap){
 				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));
@@ -220,63 +219,82 @@ void aplist_init(void)
 		}	
 	}
 	
+	fclose(fp);
+
 	return ;
 	
 }
 
 void tplist_init(void)
 {
-	int i, err = 0;
+
+	int file_size;
 	tmplat_list tp;
-	char buf[2056], *str, name[20], *optstr, optname[30], optval[50];
+	char buf[512];
+	char key[32] = {'\0'};
+	char value[128] = {'\0'};
+	char *optstr;
+	FILE *fp =NULL;
+	char *p_buf = NULL;
+	char *p_key_value = NULL;
 	
+	/*1:read the content from the tplist*/
+	if (access(TP_LIST_FILE, F_OK) != 0){
+		return;
+	}
+
+	if ((fp = fopen(TP_LIST_FILE, "r")) == NULL){
+		return;
+	}
 	
-	for (i = 0;; i++){
-		bzero (name, sizeof (name));
-		bzero (buf, sizeof (buf));
-		sprintf (name, "template_%d", i);
-		file_read("tplist", name, buf);
-		
-		if (strlen (buf) == 0){
-			err++;
-			if (i == 0) {
-				strcpy(buf, "name=default|id=0|ssid=MoreWiFi|encrypt=none|key=");
-				file_write("tplist", "template_0", buf);
-			} else {
-				if (err > 8){
-					break;
+	/*for old tplist file cut the ap_cfg_xx= header line*/
+	sprintf(buf,"sed -i 's/^ap_cfg_[0-9]*=//g' %s",TP_LIST_FILE);
+	system(buf);
+	fseek(fp, 0, SEEK_END);
+	file_size = ftell(fp);
+	if (file_size == 0){
+		/*no contents - write the default value for default template*/
+		strcpy(buf, "name=default|id=0|ssid=MoreWiFi|encrypt=none|key=");
+		file_write(TP_LIST_FILE, "id=0", buf);
+		fclose(fp);
+		return;
+	}
+
+	fseek(fp,0,SEEK_SET);
+	/*get the tplist file content*/
+	while((fgets(buf,512,fp))!=NULL){
+		/*get the mac address of ap*/
+		if (!(strlen(buf) <=1 && buf[0] ==10)){ //排除文件换行无内容情况
+			p_buf = buf;
+			p_key_value = strtok(p_buf,"|");
+
+			while(p_key_value){
+				memset(key,'\0',sizeof(key));
+				memset(value ,'\0',sizeof(value));
+				optstr = strstr (p_key_value, "=");
+				strncpy (key, p_key_value, optstr - p_key_value);
+				strncpy (value, optstr + 1,strlen(optstr)-1);
+
+				/*fill data in the double link list node*/
+				if (strcasecmp(key, "name") == 0){
+					strcpy(tp.tpname,value);
+				}else if (strcasecmp (key, "id") == 0){
+					tp.id = (char )atoi(value);
+				}else if (strcasecmp (key, "ssid") == 0){
+					strcpy(tp.tmplat_ssid_info.ssid,value);
+				}else if (strcasecmp (key, "encrypt") == 0){
+					strcpy(tp.tmplat_ssid_info.encrypt,value);
+				}else if (strcasecmp (key, "key") == 0){
+					strcpy(tp.tmplat_ssid_info.key,key);
 				}
-				continue;
-			}
-		}
-		
-		memset (&tp, 0, sizeof (tmplat_list));
-		str = strtok (buf, "|");
-		
-		while (str){
-			bzero (optname, sizeof (optname));
-			bzero (optval, sizeof (optname));
-			optstr = strstr (str, "=");
-			strncpy (optname, str, optstr - str);
-			strcpy (optval, optstr + 1);
-			
-			if (strcasecmp(optname, "name") == 0){
-				strcpy(tp.tpname, optval);
-			}else if (strcasecmp (optname, "id") == 0){
-				tp.id = atoi(optval);
-			}else if (strcasecmp (optname, "ssid") == 0){
-				strcpy (tp.tmplat_ssid_info.ssid, optval);
-			}else if (strcasecmp (optname, "encrypt") == 0){
-				strcpy (tp.tmplat_ssid_info.encrypt, optval);
-			}else if (strcasecmp (optname, "key") == 0){
-				strcpy (tp.tmplat_ssid_info.key, optval);
+
+				p_key_value = strtok (NULL, "|");
 			}
 			
-			print_debug_log("[debug] [tplist_%d] [%s:%s]\n", i, optname, optval);
-			str = strtok (NULL, "|");
+			insert_template (&tp);
+			memset (&tp, '\0', sizeof (tmplat_list));
+			memset(buf,'\0',sizeof(512));
 		}
-		
-		insert_template (&tp);
 	}
 	return;
 }
@@ -461,7 +479,7 @@ void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 	}else if (strcasecmp (tagname, "aip") == 0){
 		strncpy (apcfg->apinfo.aip, value, len);
 	}else if (strcasecmp (tagname, "mac") == 0){
-		strncpy (apcfg->apinfo.apmac, value, len);
+		strncpy ((char *)apcfg->apinfo.apmac, value, len);
 	}else if (strcasecmp (tagname, "channel") == 0){
 		strncpy (apcfg->apinfo.wifi_info.channel, value, len);
 	}else if (strcasecmp (tagname, "id") == 0){
@@ -813,11 +831,11 @@ int proc_template_edit(tmplat_list *tpcfg, struct ubus_request_data *req)
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
 			if (tpcfg->id == ap->apinfo.id_guest){
-				memset(&(ap->apinfo.wifi_info.ssid_info_guest),0,sizeof(ap->apinfo.wifi_info.ssid_info_guest));
+				memset(&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof(ap->apinfo.wifi_info.ssid_info_guest));
 				memcpy(&(ap->apinfo.wifi_info.ssid_info_guest),&(tpcfg->tmplat_ssid_info),sizeof(tpcfg->tmplat_ssid_info));
 				change = true;
 			}else{
-				memset(&(ap->apinfo.wifi_info.ssid_info),0,sizeof(ap->apinfo.wifi_info.ssid_info));
+				memset(&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof(ap->apinfo.wifi_info.ssid_info));
 				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tpcfg->tmplat_ssid_info),sizeof(tpcfg->tmplat_ssid_info));
 				change =true;
 			}
@@ -981,7 +999,7 @@ static int ubus_proc_apinfo(struct ubus_context *ctx, struct ubus_object *obj,
 		mac = blobmsg_get_string (tb[MAC]);
 		/*use the mac to find the ap exist*/
 		if ( mac != NULL){
-			mac_string_to_value(mac,mac_value);
+			mac_string_to_value((unsigned char *)mac,mac_value);
 			head = &aplist.hash[aplist_entry_hash(mac_value)];
 			ap = aplist_entry_find(head,mac_value);
 			if(ap != NULL){
@@ -1059,7 +1077,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	
 	/*use the mac to find the ap exist*/
 	if ( mac != NULL){
-		mac_string_to_value(mac,mac_value);
+		mac_string_to_value((unsigned char *)mac,mac_value);
 		head = &aplist.hash[aplist_entry_hash(mac_value)];
 		ap = aplist_entry_find(head,mac_value);
 		
@@ -1184,7 +1202,6 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	char edit_temp0_flag = false;
 	char index[64] = {0};
 	char res[1024] = {0};
-	char sid[10] = {0};
 	char *ssid = NULL;
 	char *key = NULL;
 	char *encrypt = NULL;
@@ -1222,8 +1239,6 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		goto error;
 	}
 	
-	sprintf (sid, "%d", id);
-	
 	/*the default template can't be modified by user*/
 	if ( ( (id == 0 || id ==1) && edit_temp0_flag== false) || (tp = find_template (id)) == NULL){
 		blobmsg_add_string (&b, "msg", "template id invalid");
@@ -1257,7 +1272,7 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		strcpy (tp->tmplat_ssid_info.key, key);
 	}
 
-	sprintf (index, "template_%s", sid);
+	sprintf (index, "id=%d", id);
 	format_tmp_cfg (tp, res);
 	file_write(TP_LIST_FILE, index, res);
 	
@@ -1294,7 +1309,8 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 {
 	int i;
 	char change = FALSE;
-	char index[20] = {'\0'};
+	char res[1024] = {0};
+	char index[64] = {'\0'};
 	int id = ILLEGAL_TMPLATE_ID;
 	tmplat_list *tp = NULL;
 	ap_status_entry *ap = NULL;
@@ -1318,11 +1334,11 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
 			if (tp->id == ap->apinfo.id_guest){
-				memset(&(ap->apinfo.wifi_info.ssid_info_guest),0,sizeof(ap->apinfo.wifi_info.ssid_info_guest));
+				memset(&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof(ap->apinfo.wifi_info.ssid_info_guest));
 				ap->apinfo.id_guest = ILLEGAL_TMPLATE_ID;
 				change = TRUE;
 			}else{
-				memset(&(ap->apinfo.wifi_info.ssid_info),0,sizeof(ap->apinfo.wifi_info.ssid_info));
+				memset(&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof(ap->apinfo.wifi_info.ssid_info));
 				
 				if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL){
 					memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));
@@ -1332,15 +1348,28 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 			}
 			
 			if (change){
-				ap->ud.type = AP_INFO;
-				ap->ud.session = SPROTO_REQUEST;
-				send_data_to_ap (ap);
+				if (ap->online != OFF ){
+					ap->ud.type = AP_INFO;
+					ap->ud.session = SPROTO_REQUEST;
+					send_data_to_ap (ap);
+				}
+
+				format_ap_cfg (ap, res);
+				sprintf(index,"mac=%02x:%02x:%02x:%02x:%02x:%02x",\
+					ap->apinfo.apmac[0]&0xff,\
+					ap->apinfo.apmac[1]&0xff,\
+					ap->apinfo.apmac[2]&0xff,\
+					ap->apinfo.apmac[3]&0xff,\
+					ap->apinfo.apmac[4]&0xff,\
+					ap->apinfo.apmac[5]&0xff);
+				file_write(AP_LIST_FILE, index, res);
 				change = false;
 			}
 		}
 	}
 	
-	sprintf (index, "template_%d", id);
+	memset(index,'\0',sizeof(index));
+	sprintf (index, "id=%d", id);
 	file_spec_content_del(TP_LIST_FILE, index);
 	del_template (tplist, id);
 
@@ -1397,7 +1426,7 @@ static int ubus_proc_templatelist(struct ubus_context *ctx, struct ubus_object *
 		return ubus_send_reply (ctx, req, b.head);
 	}
 	
-	if (id != -1){
+	if (id != ILLEGAL_TMPLATE_ID){
 		blobmsg_add_u32 (&b, "code", 1);
 		blobmsg_add_string (&b, "msg", "template info not found");
 		return ubus_send_reply (ctx, req, b.head);
@@ -1405,6 +1434,7 @@ static int ubus_proc_templatelist(struct ubus_context *ctx, struct ubus_object *
 
 	arr = blobmsg_open_array (&b, "data");
 	
+	/*show all template list*/
 	while (tp->rlink){
 		tp = tp->rlink;
 		table = blobmsg_open_table (&b, &tp->id);
@@ -1429,7 +1459,7 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 		       struct blob_attr *msg)
 {
 	struct blob_attr *tb[__CFG_MAX];
-	char index[20] = {0};
+	char index[64] = {0};
 	char res[1024] = {0};
 	int id = DEFAULT_TMPLATE_ID +1;
 	char *ssid = NULL;
@@ -1478,33 +1508,33 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 
 	if (encrypt != NULL && encrypt[0] != 0){
 		strcpy (&(p.tmplat_ssid_info.encrypt[0]), encrypt);
+		/*need encrypt*/
 		if (strcasecmp(encrypt, "none") != 0){
-			if (key == NULL || key[0] == 0){
+			if (key == NULL || key[0] == 0 ){
 				blobmsg_add_string (&b, "msg", "Need key!");
 				goto error;
+			}else{
+				if (strlen(key) < 8){
+					blobmsg_add_string (&b, "msg", "the key length must greater than or equal 8!");
+					goto error;
+				}
+				strcpy (&(p.tmplat_ssid_info.key[0]), key);
 			}
-		}else{
-			strcpy (&(p.tmplat_ssid_info.key[0]), "88888888");
-		}
-		
-		if (key != NULL && key[0] != 0){
 			
-			if (strlen(key) < 8){
-				blobmsg_add_string (&b, "msg", "the key length must greater than or equal 8!");
-				goto error;
-			}
-			strcpy (&(p.tmplat_ssid_info.key[0]), key);
+		}else{/*none*/
+			strcpy (&(p.tmplat_ssid_info.encrypt[0]), "none");
+			strcpy (&(p.tmplat_ssid_info.key[0]), "");
 		}
-	}else{
+	}else{/*default none encrypt*/
 		strcpy (&(p.tmplat_ssid_info.encrypt[0]), "none");
-		strcpy (&(p.tmplat_ssid_info.key[0]), "88888888");
+		strcpy (&(p.tmplat_ssid_info.key[0]), "");
 	}
 	
 	if (insert_template (&p) <= 0){
 		goto error;
 	}
 	
-	sprintf (index, "template_%d", p.id);
+	sprintf (index, "id=%d", p.id);
 	format_tmp_cfg (&p, res);
 	file_write(TP_LIST_FILE, index, res);
 
@@ -1519,6 +1549,7 @@ error:
 
 static const struct blobmsg_policy apdel_policy[__CFG_MAX] = {
 	[MAC] = {.name = "mac",.type = BLOBMSG_TYPE_STRING},
+	[SN] = {.name = "sn",.type = BLOBMSG_TYPE_STRING},
 };
 
 static int ubus_proc_apdel(struct ubus_context *ctx, struct ubus_object *obj,
@@ -1526,8 +1557,8 @@ static int ubus_proc_apdel(struct ubus_context *ctx, struct ubus_object *obj,
 		 struct blob_attr *msg)
 {
 	struct blob_attr *tb[__CFG_MAX];
-	char index[20] = {'\0'};
-	char buf[20] = {0};
+	unsigned char mac_value[ETH_ALEN] = {0};
+	char index[64] = {'\0'};
 	char *mac = NULL;
 	char *sn = NULL;
 	ap_status_entry *ap = NULL;
@@ -1545,23 +1576,40 @@ static int ubus_proc_apdel(struct ubus_context *ctx, struct ubus_object *obj,
 	blob_buf_init (&b, 0);
 	/*use the mac to find the ap exist*/
 	if ( mac != NULL){
-		head = &aplist.hash[aplist_entry_hash(mac)];
-		ap = aplist_entry_find(head,mac);
+		mac_string_to_value((unsigned char *)mac,mac_value);
+		head = &aplist.hash[aplist_entry_hash(mac_value)];
+		ap = aplist_entry_find(head,mac_value);
+
+		if ( ap == NULL ){
+			blobmsg_add_u32 (&b, "code", 1);
+			blobmsg_add_string (&b, "msg", "not find this ap!");
+			goto end;
+		}
 		
-		if (strcmp(ap->apinfo.sn ,sn) != 0){
+		if ( sn && sn[0] != 0){
+			if (strcmp(ap->apinfo.sn ,sn) != 0){
+				ap = NULL;
+				blobmsg_add_string (&b, "msg", "the sn not matched the mac address!");
+				print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
+			}
+		}else{
 			ap = NULL;
+			blobmsg_add_string (&b, "msg", "need the sn!");
 		}
 		
 		if (ap == NULL){
 			blobmsg_add_u32 (&b, "code", 1);
-			blobmsg_add_string (&b, "msg", "not found this ap!");
 			goto end;
 		}
+	}else{
+		blobmsg_add_u32 (&b, "code", 1);
+		blobmsg_add_string (&b, "msg", "need mac address!");
+		goto end;
 	}
 	
-	strncpy(buf, ap->apinfo.apmac, 20);
-	sprintf (index, "ap_cfg_%d", ap->apid);
-	aplist_entry_remove(mac);
+	print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
+	sprintf (index, "mac=%s", mac);
+	aplist_entry_remove(mac_value);
 	file_spec_content_del(AP_LIST_FILE, index);
 	blobmsg_add_u32 (&b, "code", 0);
 
@@ -1581,6 +1629,7 @@ static int ubus_proc_apcmd(struct ubus_context *ctx, struct ubus_object *obj,
 		 struct blob_attr *msg)
 {
 	struct blob_attr *tb[__CFG_MAX];
+	unsigned char mac_value[ETH_ALEN] = {0};
 	int len = 0;
 	char *mac = NULL;
 	char *addr = NULL;
@@ -1606,17 +1655,40 @@ static int ubus_proc_apcmd(struct ubus_context *ctx, struct ubus_object *obj,
 	blob_buf_init (&b, 0);
 	/*use the mac to find the ap exist*/
 	if ( mac != NULL){
-		head = &aplist.hash[aplist_entry_hash(mac)];
-		ap = aplist_entry_find(head,mac);
+		mac_string_to_value((unsigned char *)mac,mac_value);
+		head = &aplist.hash[aplist_entry_hash(mac_value)];
+		ap = aplist_entry_find(head,mac_value);
 		
-		if (strcmp(ap->apinfo.sn ,sn) != 0){
+		if ( ap == NULL ){
+			blobmsg_add_u32 (&b, "code", 1);
+			blobmsg_add_string (&b, "msg", "not find this ap!");
+			goto error;
+		}
+
+		if ( sn && sn[0] != 0){
+			if (strcmp(ap->apinfo.sn ,sn) != 0){
+				ap = NULL;
+				blobmsg_add_string (&b, "msg", "the sn not matched the mac address!");
+				print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
+			}
+		}else{
 			ap = NULL;
+			blobmsg_add_string (&b, "msg", "need the sn!");
 		}
 		
+		if (ap == NULL){
+			print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
+			blobmsg_add_u32 (&b, "code", 1);
+			goto error;
+		}
+	}else{
+		blobmsg_add_u32 (&b, "code", 1);
+		blobmsg_add_string (&b, "msg", "need mac address!");
+		goto error;
 	}
 
-	if (ap == NULL || ap->online == OFF){
-		blobmsg_add_string (&b, "msg", "not found ap or ap off-line");
+	if (ap->online == OFF){
+		blobmsg_add_string (&b, "msg", "ap off-line");
 		goto error;
 	}
 	
@@ -1669,7 +1741,7 @@ static const struct ubus_method acd_methods[] = {
 	UBUS_METHOD_MASK ("templatelist", ubus_proc_templatelist, templatelist_policy, 1 << TMPLATID),
 	UBUS_METHOD_MASK ("templateadd", ubus_proc_templateadd, templateadd_policy, 1 << SSID | 1 << ENCRYPT | 1 << NAME | 1 << KEY),
 	UBUS_METHOD_MASK ("templatedel", ubus_proc_templatedel, templatedel_policy, 1 << TMPLATID),
-	UBUS_METHOD_MASK ("apdel", ubus_proc_apdel, apdel_policy,  1 << MAC),
+	UBUS_METHOD_MASK ("apdel", ubus_proc_apdel, apdel_policy,  1 << MAC | 1 << SN),
 	UBUS_METHOD_MASK ("apcmd", ubus_proc_apcmd, apcmd_policy, 1 << MAC | 1 << SN | 1 << CMD | 1 << ADDR),
 };
 
@@ -1706,7 +1778,7 @@ static void run_server(void)
 		run_server();
 		return;
 	}
-	
+
 	uloop_fd_add (&server, ULOOP_READ | ULOOP_WRITE);
 }
 
