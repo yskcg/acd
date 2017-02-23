@@ -23,46 +23,6 @@ int file_write(char *fname, char *index, char *value)
 	return 0;
 }
 
-char *file_read(char *fname, char *tagname, char *value)
-{
-	FILE *fp;
-	char buf[1024] = {0}, name[128] = {0}, *str = NULL;
-	
-	if (!(fname && tagname && value)){
-		return NULL;
-	}
-
-	sprintf(name, "/etc/%s", fname);
-	if (access(name, F_OK) != 0){
-		return NULL;
-	}
-	
-	if ((fp = fopen(name, "r")) == NULL){
-		return NULL;
-	}
-
-	while(!feof(fp)){
-		bzero(buf, sizeof(buf));
-		
-		if (fgets(buf, sizeof(buf), fp) == NULL){
-			continue;
-		}
-		
-		if ((str = strstr(buf, tagname)) == NULL){
-			continue;
-		}
-		
-		fclose(fp);
-		strcpy(value, str + strlen(tagname) + 1);
-		value[strlen(value) - 1] = 0;
-		return value;
-	}
-	
-	fclose(fp);
-	return NULL;
-}
-
-
 int file_spec_content_del(char *fname, char *index)
 {
 	char shell_cmd[128] = {0};
@@ -184,7 +144,7 @@ static inline u32  get_unaligned_32(const u8_t *buf)
 }
 #endif
 
-int aplist_entry_hash(u8 *addr)
+int aplist_entry_hash(u8_t *addr)
 {
 	u32 hash_value;
 	
@@ -197,16 +157,16 @@ int aplist_entry_hash(u8 *addr)
 	return hash_value;
 }
 
-ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8 *addr)
+ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8_t *addr)
 {
 	
 	ap_status_entry *aplist_node = NULL;
 
-	if (!is_valid_ether_addr(addr)){
+	if (!is_valid_ether_addr((const u8 *)addr)){
 		return NULL;
 	}
 	
-	if (is_local_ether_addr(addr)){
+	if (is_local_ether_addr((const u8 *)addr)){
 		return NULL;
 	}
 
@@ -215,68 +175,72 @@ ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8 *addr)
 		memcpy(aplist_node->apinfo.apmac, addr, ETH_ALEN);
 		aplist_node->status = 1;
 		hlist_add_head(&aplist_node->hlist, head);
-		aplist_node->apinfo.apmac[strlen(addr)+1] = '\0';
 	}
 	return aplist_node;
 }
 
-void * aplist_entry_remove(u8 *addr)
+void * aplist_entry_remove(u8_t *addr)
 {
 	struct hlist_head *head = NULL;
 	ap_status_entry *aplist_node = NULL;
+	struct hlist_node *tmp;
 		
-	if (!is_valid_ether_addr(addr)){
+	if (!is_valid_ether_addr((const u8 *)addr)){
 		return NULL;
 	}
 	
-	if (is_local_ether_addr(addr)){
+	if (is_local_ether_addr((const u8 *)addr)){
 		return NULL;
 	}
 	
 	head = &aplist.hash[aplist_entry_hash(addr)];
-	aplist_node = aplist_entry_find(head,addr);
 	
-	if(aplist_node){
-		free_mem(aplist_node);
-		free(aplist_node);	
+	hlist_for_each_entry_safe(aplist_node,tmp,head, hlist) {
+		if (ether_addr_equal((const u8 *)aplist_node->apinfo.apmac,(const u8 *)addr)){
+			print_debug_log("%s,%d,0x%2x:0x%2x:0x%2x:0x%2x:0x%2x:0x%2x\n\n",__FUNCTION__,__LINE__,addr[0]&0xff,addr[1]&0xff,addr[2]&0xff,addr[3]&0xff,addr[4]&0xff,addr[5]&0xff);
+			/*del the node*/
+			hlist_del(&aplist_node->hlist);
+			free_mem(aplist_node);
+			free(aplist_node);
+		}
 	}
-	
+
 	return NULL;
 }
 
-ap_status_entry *aplist_entry_find(struct hlist_head *head, u8 *addr)
+ap_status_entry *aplist_entry_find(struct hlist_head *head, u8_t *addr)
 {
 	ap_status_entry *aplist_node = NULL;
 
 
-	if (!is_valid_ether_addr(addr)){
+	if (!is_valid_ether_addr((const u8 *)addr)){
 		return NULL;
 	}
 	
-	if (is_local_ether_addr(addr)){
+	if (is_local_ether_addr((const u8 *)addr)){
 		return NULL;
 	}
 	
 	hlist_for_each_entry(aplist_node, head, hlist) {		
-		if (ether_addr_equal(aplist_node->apinfo.apmac,addr)){
+		if (ether_addr_equal((const u8 *)aplist_node->apinfo.apmac,(const u8 *)addr)){
 			print_debug_log("%s,%d,0x%2x:0x%2x:0x%2x:0x%2x:0x%2x:0x%2x\n\n",__FUNCTION__,__LINE__,addr[0]&0xff,addr[1]&0xff,addr[2]&0xff,addr[3]&0xff,addr[4]&0xff,addr[5]&0xff);
 			return aplist_node;
 		}
 	}
+	
 	return NULL;
 }
 
-ap_status_entry *aplist_entry_insert(u8 *addr)
+ap_status_entry *aplist_entry_insert(u8_t *addr)
 {	
 	struct hlist_head *head = NULL;
 	ap_status_entry *aplist_node = NULL;
 	
-	
-	if (!is_valid_ether_addr(addr)){
+	if (!is_valid_ether_addr((const u8 *)addr)){
 		return NULL;
 	}
 	
-	if (is_local_ether_addr(addr)){
+	if (is_local_ether_addr((const u8 *)addr)){
 		return NULL;
 	}
 	
@@ -285,12 +249,11 @@ ap_status_entry *aplist_entry_insert(u8 *addr)
 	
 	if(!aplist_node) {
 		aplist_node = aplist_entry_creat(head,addr);
-		
 		if(!aplist_node){
 			return NULL;
 		}
 	}else{
-		
+		print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 		aplist_node->status = 0;
 	}
 	
