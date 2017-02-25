@@ -40,7 +40,6 @@
 
 /*file operation API*/
 extern int file_write(char *fname, char *tagname, char *value);
-extern char *file_read(char *fname, char *tagname, char *value);
 extern int file_spec_content_del(char *fname, char *index);
 
 /*list API*/
@@ -51,11 +50,11 @@ extern int insert_template(tmplat_list *s);
 extern tmplat_list *create_tplist(void);
 
 /*hash API*/
-extern ap_status_entry *aplist_entry_find(struct hlist_head *head, u8 *addr);
-extern ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8 *addr);
-extern ap_status_entry *aplist_entry_insert(u8 *addr);
-extern void * aplist_entry_remove(u8 *addr);
-extern int aplist_entry_hash(u8 *addr);
+extern ap_status_entry *aplist_entry_find(struct hlist_head *head, u8_t *addr);
+extern ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8_t *addr);
+extern ap_status_entry *aplist_entry_insert(u8_t *addr);
+extern void * aplist_entry_remove(u8_t *addr);
+extern int aplist_entry_hash(u8_t *addr);
 #endif
 
 

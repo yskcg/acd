@@ -18,6 +18,11 @@ int file_write(char *fname, char *index, char *value)
 		/*添加index 的内容*/
 		sprintf(buf,"echo \"%s\" >>%s",value,fname);
 		system(buf);
+		
+		/*删除空白行*/
+		memset(shell_cmd,'\0',sizeof(shell_cmd));
+		sprintf(shell_cmd,"sed -i '/^\s*$/d' %s",fname);
+		system(shell_cmd);
 	}
 	
 	return 0;
@@ -34,6 +39,10 @@ int file_spec_content_del(char *fname, char *index)
 	if (index != NULL){
 		/*删除指定行*/
 		sprintf(shell_cmd,"sed -i '/%s/d' %s",index,fname); 
+		system(shell_cmd);
+		/*删除空白行*/
+		memset(shell_cmd,'\0',sizeof(shell_cmd));
+		sprintf(shell_cmd,"sed -i '/^\s*$/d' %s",fname);
 		system(shell_cmd);
 	}
 	
@@ -173,7 +182,8 @@ ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8_t *addr)
 	aplist_node = (ap_status_entry *)calloc(1, sizeof(*aplist_node));;
 	if (aplist_node) {
 		memcpy(aplist_node->apinfo.apmac, addr, ETH_ALEN);
-		aplist_node->status = 1;
+		aplist_node->status = AC_NEW_HASH_NODE;
+		aplist_node->apinfo.id = DEFAULT_TMPLATE_ID;
 		hlist_add_head(&aplist_node->hlist, head);
 	}
 	return aplist_node;
@@ -254,7 +264,9 @@ ap_status_entry *aplist_entry_insert(u8_t *addr)
 		}
 	}else{
 		print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
-		aplist_node->status = 0;
+		if (aplist_node->status != AC_AP_HASH_NODE_ON){
+			aplist_node->status = AC_INIT_OFFLINE;
+		}
 	}
 	
 	return aplist_node;

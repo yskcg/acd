@@ -72,13 +72,20 @@ static void client_read_cb(struct ustream *s, int bytes)
 static void client_close(struct ustream *s)
 {
 	struct client *cl = container_of (s, struct client, s.stream);
+	int i;
 	ap_status_entry *ap = NULL;
 
 	print_debug_log ("[debug] [fd:%d connection closed!!]\n", cl->s.fd.fd);
 	
-	/*if ((ap = find_apmember (NULL, NULL, cl->s.fd.fd)) != NULL){
-		free_mem(ap);
-	}*/
+	/*show all ap info in this AC*/
+	for(i = 0;i < AP_HASH_SIZE;i++){
+		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {
+			if ( ap->client_addr && ap->client_addr->s.fd.fd == cl->s.fd.fd){
+				free_mem(ap);
+			}
+		}
+	}
+	print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 }
 
 static void client_notify_state(struct ustream *s)
@@ -166,7 +173,10 @@ void aplist_init(void)
 	/*for old aplist file cut the ap_cfg_xx= header line*/
 	sprintf(buf,"sed -i 's/^ap_cfg_[0-9]*=//g' %s",AP_LIST_FILE);
 	system(buf);
-	
+	/*删除空白行*/
+	memset(buf,'\0',sizeof(buf));
+	sprintf(buf,"sed -i '/^\s*$/d' %s",AP_LIST_FILE);
+	system(buf);
 	fseek(fp, 0, SEEK_END);
 	file_size = ftell(fp);
 	
@@ -212,11 +222,11 @@ void aplist_init(void)
 				break;
 			}
 
-			if ((tp = find_template(ap->apinfo.id)) != NULL && ap){
-				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));
-			}else if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL && ap){
+			if ((tp = find_template(ap->apinfo.id)) != NULL){
+				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
+			}else if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL){
 				ap->apinfo.id = tp->id;
-				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));
+				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
 			}
 			
 			memset(buf,'\0',sizeof(512));
@@ -658,15 +668,14 @@ int ap_online_proc(ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr)
 	}
 	
 	/*when the hash node is new creat,so,use the default tmplate id*/
-	if( ap->status ==1){
-		if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL && ap){
-			ap->apinfo.id = tp->id;
-			memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));
+	if( ap->status ==AC_NEW_HASH_NODE ){
+		if ((tp = find_template (ap->apinfo.id)) != NULL){
+			memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
 		}
 		
-		if ((tp = find_template (DEFAULT_TMP_GUEST_ID)) != NULL && ap){
+		if ((tp = find_template (DEFAULT_TMP_GUEST_ID)) != NULL){
 			ap->apinfo.id_guest = tp->id;
-			memcpy(&(ap->apinfo.wifi_info.ssid_info_guest),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));	
+			memcpy(&(ap->apinfo.wifi_info.ssid_info_guest),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));	
 		}
 	}
 	
@@ -683,7 +692,8 @@ int ap_online_proc(ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr)
 	}
 	
 	strcpy (ap->apinfo.rip, inet_ntoa(localaddr->sin_addr));
-	ap->status = 2;
+	ap->status = AC_AP_HASH_NODE_ON;
+	ap->fd = sfd;
 	format_ap_cfg (ap, res);
 
 	sprintf(index,"mac=%02x:%02x:%02x:%02x:%02x:%02x",\
@@ -737,12 +747,12 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 		
 		if ( ap ){
 			ap->online = apl->online;
-			if (ap->status == 1 || ap->status == 0){
-				status = 1;
+			if (ap->status == AC_NEW_HASH_NODE || ap->status == AC_INIT_OFFLINE){
+				status = AC_NEW_HASH_NODE;
 			}
-			
+
 			/*ap is online ,judge the socket*/
-			if (ap->status == 2){
+			if (ap->status == AC_AP_HASH_NODE_ON){
 				if (ap->fd != cl->s.fd.fd){					
 					if (ap->client_addr != NULL){
 						p_cltaddr = ap->client_addr;
@@ -760,7 +770,12 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 			
 			gettime(&ap->last_tv);
 			memcpy(&(ap->ud),&(apl->ud),sizeof(ecode_ud_spro));
-			memcpy(&(ap->apinfo),&(apl->apinfo) ,sizeof(ap_sys_info));
+			/*update the ap info :hver,sver,sn,aip,model*/
+			strcpy(ap->apinfo.hver,apl->apinfo.hver);
+			strcpy(ap->apinfo.sver,apl->apinfo.sver);
+			strcpy(ap->apinfo.sn,apl->apinfo.sn);
+			strcpy(ap->apinfo.aip,apl->apinfo.aip);
+			strcpy(ap->apinfo.model,apl->apinfo.model);	
 		}else{
 			return -2;
 		}
@@ -780,7 +795,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 		slen = send_data_to_ap (ap);
 		
 		return ACd_STATUS_OK;
-	}else if (status ==1  && ap->ud.session == SPROTO_REQUEST){
+	}else if (status ==AC_NEW_HASH_NODE  && ap->ud.session == SPROTO_REQUEST){
 		return ap_online_proc (ap, cl->s.fd.fd, &cl->localaddr);
 	}
 	
@@ -802,6 +817,7 @@ error:
 int send_data_to_ap (ap_status_entry * ap)
 {
 	int psize;
+	int len;
 	char res[2056] = { 0 };
 
 	if (ap == NULL){
@@ -813,8 +829,8 @@ int send_data_to_ap (ap_status_entry * ap)
 		return 0;
 	}
 	
-	write (ap->fd, res, psize);
-	
+	len = write (ap->fd, res, psize);
+
 	return psize;
 }
 
@@ -846,12 +862,12 @@ int proc_template_edit(tmplat_list *tpcfg, struct ubus_request_data *req)
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
 			if (tpcfg->id == ap->apinfo.id_guest){
-				memset(&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof(ap->apinfo.wifi_info.ssid_info_guest));
-				memcpy(&(ap->apinfo.wifi_info.ssid_info_guest),&(tpcfg->tmplat_ssid_info),sizeof(tpcfg->tmplat_ssid_info));
+				memset(&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof(ap_ssid_info));
+				memcpy(&(ap->apinfo.wifi_info.ssid_info_guest),&(tpcfg->tmplat_ssid_info),sizeof(ap_ssid_info));
 				change = true;
 			}else{
-				memset(&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof(ap->apinfo.wifi_info.ssid_info));
-				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tpcfg->tmplat_ssid_info),sizeof(tpcfg->tmplat_ssid_info));
+				memset(&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof(ap_ssid_info));
+				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tpcfg->tmplat_ssid_info),sizeof(ap_ssid_info));
 				change =true;
 			}
 			
@@ -1135,7 +1151,6 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		
 		
 		__blob_for_each_attr(attr, dt, len) {
-			print_debug_log("%s,%d,len:%d\n",__FUNCTION__,__LINE__,i);
 			sprintf (id[i++], "%d", blobmsg_get_u32 (attr));
 		}
 		
@@ -1151,15 +1166,15 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 			continue;
 		}
 
-		memset (&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof (ap->apinfo.wifi_info.ssid_info));
-		memset (&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof (ap->apinfo.wifi_info.ssid_info_guest));
+		memset (&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof (ap_ssid_info));
+		memset (&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof (ap_ssid_info));
 		
 		if (atoi(&id[i][0]) == 0 ){
 			ap->apinfo.id = template_id;
 		}else{
 			ap->apinfo.id_guest = template_id;
 		}	
-		memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tpl->tmplat_ssid_info),sizeof(tpl->tmplat_ssid_info));
+		memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tpl->tmplat_ssid_info),sizeof(ap_ssid_info));
 	}
 
 	apinfo_to_json_string (&b, ap);
@@ -1180,8 +1195,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		blobmsg_add_string (&b, "msg", "Distributed configuration failed");
 		goto error;
 	}
-	
-	print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
+
 	blobmsg_add_u32 (&b, "code", 0);
 	
 	return ubus_send_reply (ctx, req, b.head);
@@ -1349,14 +1363,14 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
 			if (tp->id == ap->apinfo.id_guest){
-				memset(&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof(ap->apinfo.wifi_info.ssid_info_guest));
+				memset(&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof(ap_ssid_info));
 				ap->apinfo.id_guest = ILLEGAL_TMPLATE_ID;
 				change = TRUE;
 			}else{
-				memset(&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof(ap->apinfo.wifi_info.ssid_info));
+				memset(&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof(ap_ssid_info));
 				
 				if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL){
-					memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(tp->tmplat_ssid_info));
+					memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
 					ap->apinfo.id = DEFAULT_TMPLATE_ID;
 					change =TRUE;
 				}

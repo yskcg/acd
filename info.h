@@ -49,9 +49,12 @@
 #define MAC_LEN			    100
 #define ETH_ALEN            6
 #define AP_MAX_BINDID       2
-#define ILLEGAL_TMPLATE_ID  0
-#define DEFAULT_TMPLATE_ID  1
-#define DEFAULT_TMP_GUEST_ID 2
+#define ILLEGAL_TMPLATE_ID  -1
+#define DEFAULT_TMPLATE_ID  0
+#define DEFAULT_TMP_GUEST_ID 1
+#define AC_INIT_OFFLINE     0
+#define AC_NEW_HASH_NODE    1
+#define AC_AP_HASH_NODE_ON  2
 
 
 #ifndef container_of
