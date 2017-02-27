@@ -1081,6 +1081,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	char *channel = NULL;
 	char *txpower = NULL;
 	char *apname = NULL;
+	char *aip = NULL;
 	struct blob_attr *attr;
 	struct blob_attr *dt;
 	struct hlist_head *head =NULL;
@@ -1104,6 +1105,10 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	
 	if (tb[NAME]){
 		apname = blobmsg_get_string (tb[NAME]);
+	}
+
+	if (tb[AIP]){
+		aip = blobmsg_get_string (tb[AIP]);
 	}
 	
 	/*use the mac to find the ap exist*/
@@ -1209,6 +1214,7 @@ error:
 static const struct blobmsg_policy apedit_policy[__CFG_MAX] = {
 	[MAC] = {.name = "mac",.type = BLOBMSG_TYPE_STRING},
 	[NAME] = {.name = "name",.type = BLOBMSG_TYPE_STRING},
+	[AIP] ={.name = "aip",.type = BLOBMSG_TYPE_STRING },
 	[TMPLATID] = {.name = "templateid",.type = BLOBMSG_TYPE_ARRAY},
 	[CHANNEL] = {.name = "channel",.type = BLOBMSG_TYPE_STRING},
 	[TXPOWER] = {.name = "txpower",.type = BLOBMSG_TYPE_STRING},
@@ -1621,9 +1627,6 @@ static int ubus_proc_apdel(struct ubus_context *ctx, struct ubus_object *obj,
 				blobmsg_add_string (&b, "msg", "the sn not matched the mac address!");
 				print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 			}
-		}else{
-			ap = NULL;
-			blobmsg_add_string (&b, "msg", "need the sn!");
 		}
 		
 		if (ap == NULL){
