@@ -267,6 +267,7 @@ void tplist_init(void)
 	system(buf);
 	fseek(fp, 0, SEEK_END);
 	file_size = ftell(fp);
+	memset(buf,'\0',sizeof(512));
 	if (file_size == 0){
 		/*no contents - write the default value for default template*/
 		strcpy(buf, "name=default|id=0|ssid=MoreWiFi|encrypt=none|key=");
@@ -275,7 +276,8 @@ void tplist_init(void)
 
 	fseek(fp,0,SEEK_SET);
 	/*get the tplist file content*/
-	while((fgets(buf,512,fp))!=NULL){
+	do{
+		print_debug_log("%s,%d buf:%s\n",__FUNCTION__,__LINE__,buf);
 		/*get the mac address of ap*/
 		if (!(strlen(buf) <=1 && buf[0] ==10)){ //排除文件换行无内容情况
 			p_buf = buf;
@@ -308,7 +310,7 @@ void tplist_init(void)
 			memset (&tp, '\0', sizeof (tmplat_list));
 			memset(buf,'\0',sizeof(512));
 		}
-	}
+	}while((fgets(buf,512,fp))!=NULL);
 
 	fclose(fp);
 
