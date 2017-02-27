@@ -271,8 +271,6 @@ void tplist_init(void)
 		/*no contents - write the default value for default template*/
 		strcpy(buf, "name=default|id=0|ssid=MoreWiFi|encrypt=none|key=");
 		file_write(TP_LIST_FILE, "id=0", buf);
-		fclose(fp);
-		return;
 	}
 
 	fseek(fp,0,SEEK_SET);
@@ -311,6 +309,9 @@ void tplist_init(void)
 			memset(buf,'\0',sizeof(512));
 		}
 	}
+
+	fclose(fp);
+
 	return;
 }
 
