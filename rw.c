@@ -183,7 +183,7 @@ ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8_t *addr)
 	if (aplist_node) {
 		memcpy(aplist_node->apinfo.apmac, addr, ETH_ALEN);
 		aplist_node->status = AC_NEW_HASH_NODE;
-		aplist_node->apinfo.id = DEFAULT_TMPLATE_ID;
+		aplist_node->apinfo.id = DEFAULT_TMPLATE_ID_MAP;
 		hlist_add_head(&aplist_node->hlist, head);
 	}
 	return aplist_node;
@@ -207,7 +207,6 @@ void * aplist_entry_remove(u8_t *addr)
 	
 	hlist_for_each_entry_safe(aplist_node,tmp,head, hlist) {
 		if (ether_addr_equal((const u8 *)aplist_node->apinfo.apmac,(const u8 *)addr)){
-			print_debug_log("%s,%d,0x%2x:0x%2x:0x%2x:0x%2x:0x%2x:0x%2x\n\n",__FUNCTION__,__LINE__,addr[0]&0xff,addr[1]&0xff,addr[2]&0xff,addr[3]&0xff,addr[4]&0xff,addr[5]&0xff);
 			/*del the node*/
 			hlist_del(&aplist_node->hlist);
 			free_mem(aplist_node);
@@ -233,7 +232,6 @@ ap_status_entry *aplist_entry_find(struct hlist_head *head, u8_t *addr)
 	
 	hlist_for_each_entry(aplist_node, head, hlist) {		
 		if (ether_addr_equal((const u8 *)aplist_node->apinfo.apmac,(const u8 *)addr)){
-			print_debug_log("%s,%d,0x%2x:0x%2x:0x%2x:0x%2x:0x%2x:0x%2x\n\n",__FUNCTION__,__LINE__,addr[0]&0xff,addr[1]&0xff,addr[2]&0xff,addr[3]&0xff,addr[4]&0xff,addr[5]&0xff);
 			return aplist_node;
 		}
 	}
@@ -263,7 +261,6 @@ ap_status_entry *aplist_entry_insert(u8_t *addr)
 			return NULL;
 		}
 	}else{
-		print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 		if (aplist_node->status != AC_AP_HASH_NODE_ON){
 			aplist_node->status = AC_INIT_OFFLINE;
 		}

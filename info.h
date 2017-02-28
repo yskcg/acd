@@ -48,10 +48,12 @@
 #define AP_HASH_SIZE 		(1<<8)
 #define MAC_LEN			    100
 #define ETH_ALEN            6
-#define AP_MAX_BINDID       2
+#define AP_MAX_BINDID       7
 #define ILLEGAL_TMPLATE_ID  -1
 #define DEFAULT_TMPLATE_ID  0
+#define DEFAULT_TMPLATE_ID_MAP 1
 #define DEFAULT_TMP_GUEST_ID 1
+#define MAX_TMP_ID          7
 #define AC_INIT_OFFLINE     0
 #define AC_NEW_HASH_NODE    1
 #define AC_AP_HASH_NODE_ON  2
@@ -161,13 +163,11 @@ typedef struct {
 typedef struct  {
     char channel[16];					//AP 对应的无线信道
     char txpower[16];					//AP 对应无线的功率
-    ap_ssid_info ssid_info;			    //auth or custom define template
-    ap_ssid_info ssid_info_guest;       //guest template
+    ap_ssid_info ssid_info[8];			//auth or custom define template
 }ap_wifi_info;
 
 typedef struct ap_info {
     char id;					        //表示对应认证、自定义模板id
-    char id_guest;                      //表示对应访客模板id
     char hver[32];					    //AP 对应的硬件版本号
     char sver[32];					    //AP 对应的软件版本号	
     char rip[16];					    //AP ac 服务器的ip地址

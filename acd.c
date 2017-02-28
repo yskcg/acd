@@ -8,6 +8,9 @@ static struct sproto 		*spro_new = NULL;	//the protocol
 static struct ubus_context  *ctx;
 static struct blob_buf b;
 
+static char temp_ssid[TEMP_SSID_BUF_SIZE] = {'\0'};
+static char temp_key[TEMP_SSID_BUF_SIZE]  = {'\0'};
+static char temp_encrypt[TEMP_SSID_BUF_SIZE] = {'\0'};
 unsigned int ap_listdb_salt;
 ap_list aplist;	//ap information list
 tmplat_list *tplist 	= NULL;
@@ -149,6 +152,7 @@ void aplist_init(void)
 {
 	
 	int file_size;
+	int i;
 	char buf[512] = {'\0'};
 	char *p_buf = NULL;
 	char key[32] = {'\0'};
@@ -222,13 +226,18 @@ void aplist_init(void)
 				break;
 			}
 
-			if ((tp = find_template(ap->apinfo.id)) != NULL){
-				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
-			}else if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL){
-				ap->apinfo.id = tp->id;
-				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
+			if (ap->apinfo.id == 0){
+				ap->apinfo.id = DEFAULT_TMPLATE_ID_MAP;
 			}
-			
+
+			for ( i = 0;i<=AP_MAX_BINDID;i++){
+				if (ap->apinfo.id & (0x01<<i)){
+					if ((tp = find_template(i)) != NULL){
+						memcpy(&(ap->apinfo.wifi_info.ssid_info[i]),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
+					}
+				}
+			}
+
 			memset(buf,'\0',sizeof(512));
 			ap = NULL ;
 		}	
@@ -277,9 +286,10 @@ void tplist_init(void)
 	fseek(fp,0,SEEK_SET);
 	/*get the tplist file content*/
 	do{
-		print_debug_log("%s,%d buf:%s\n",__FUNCTION__,__LINE__,buf);
 		/*get the mac address of ap*/
-		if (!(strlen(buf) <=1 && buf[0] ==10)){ //排除文件换行无内容情况
+		if (strlen(buf) <=1 || buf[0] ==10){ //排除文件换行无内容情况
+			continue;
+		}else{
 			p_buf = buf;
 			p_key_value = strtok(p_buf,"|");
 
@@ -308,8 +318,8 @@ void tplist_init(void)
 			
 			insert_template (&tp);
 			memset (&tp, '\0', sizeof (tmplat_list));
-			memset(buf,'\0',sizeof(512));
 		}
+		memset(buf,'\0',sizeof(512));
 	}while((fgets(buf,512,fp))!=NULL);
 
 	fclose(fp);
@@ -461,13 +471,13 @@ void fill_encode_data(ap_status_entry *apcfg, char *tagname, char *value)
 		return;
 	}
 	if (strcasecmp (tagname, "ssid") == 0){
-		strcpy (value, apcfg->apinfo.wifi_info.ssid_info.ssid);
+		strcpy (value, (const char *)temp_ssid);
+	}else if (strcasecmp (tagname, "encrypt") == 0){
+		strcpy (value, (const char *)temp_encrypt);
+	}else if (strcasecmp (tagname, "key") == 0){
+		strcpy (value, (const char *)temp_key);
 	}else if (strcasecmp (tagname, "channel") == 0){
 		strcpy (value, apcfg->apinfo.wifi_info.channel);
-	}else if (strcasecmp (tagname, "encrypt") == 0){
-		strcpy (value, apcfg->apinfo.wifi_info.ssid_info.encrypt);
-	}else if (strcasecmp (tagname, "key") == 0){
-		strcpy (value, apcfg->apinfo.wifi_info.ssid_info.key);
 	}else if (strcasecmp (tagname, "txpower") == 0){
 		strcpy (value, apcfg->apinfo.wifi_info.txpower);
 	}else if (strcasecmp (tagname, "addr") == 0){
@@ -501,7 +511,8 @@ void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 		mac_string_to_value((unsigned char *)value,mac_value);	
 		memcpy(apcfg->apinfo.apmac, mac_value, ETH_ALEN);
 	}else if (strcasecmp (tagname, "channel") == 0){
-		strncpy (apcfg->apinfo.wifi_info.channel, value, len);
+		strncpy (apcfg->apinfo.wifi_info.channel, value,len);
+		apcfg->apinfo.wifi_info.channel[strlen(apcfg->apinfo.wifi_info.channel) -1] = '\0';
 	}else if (strcasecmp (tagname, "id") == 0){
 		apcfg->apinfo.id = atoi(value);
 	}else if (strcasecmp(tagname, "name") == 0){
@@ -672,22 +683,17 @@ int ap_online_proc(ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr)
 	
 	/*when the hash node is new creat,so,use the default tmplate id*/
 	if( ap->status ==AC_NEW_HASH_NODE ){
-		if ((tp = find_template (ap->apinfo.id)) != NULL){
-			memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
-		}
-		
-		if ((tp = find_template (DEFAULT_TMP_GUEST_ID)) != NULL){
-			ap->apinfo.id_guest = tp->id;
-			memcpy(&(ap->apinfo.wifi_info.ssid_info_guest),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));	
+		if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL){
+			memcpy(&(ap->apinfo.wifi_info.ssid_info[DEFAULT_TMPLATE_ID]),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
 		}
 	}
 	
 	if (strlen(ap->apinfo.wifi_info.channel) <1){
-		strcpy (ap->apinfo.wifi_info.channel, "auto");
+		strcpy (ap->apinfo.wifi_info.channel, "auto\0");
 	}
 	
 	if (strlen(ap->apinfo.wifi_info.txpower) <1){
-		strcpy (ap->apinfo.wifi_info.txpower, "18");
+		strcpy (ap->apinfo.wifi_info.txpower, "18\0");
 	}
 	
 	if (strlen(ap->apname) <1){
@@ -821,11 +827,29 @@ int send_data_to_ap (ap_status_entry * ap)
 {
 	int psize;
 	int len;
-	char res[2056] = { 0 };
+	int i;
+	char res[BUFLEN] = { 0 };
 
 	if (ap == NULL){
 		return -1;
 	}
+
+	/*temp method,after will change method*/
+	memset(temp_ssid,'\0',sizeof(temp_ssid));
+	memset(temp_encrypt,'\0',sizeof(temp_encrypt));
+	memset(temp_key,'\0',sizeof(temp_key));
+
+	for (i = 0; i<=MAX_TMP_ID; i++){
+		if(ap->apinfo.id & (0x01<<i)){
+			sprintf(temp_ssid+strlen((const char *)temp_ssid),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].ssid[0]));
+			sprintf(temp_encrypt+strlen((const char *)temp_encrypt),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].encrypt[0]));
+			sprintf(temp_key+strlen((const char *)temp_key),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].key[0]));
+		}
+	}
+
+	temp_ssid[strlen((const char *)temp_ssid)-1] = '\0';
+	temp_encrypt[strlen((const char *)temp_encrypt)-1] = '\0';
+	temp_key[strlen((const char *)temp_key)-1] = '\0';
 
 	psize = sproto_encode_data (&ap->ud, res);
 	if (ap->fd <= 0){
@@ -834,7 +858,7 @@ int send_data_to_ap (ap_status_entry * ap)
 	
 	len = write (ap->fd, res, psize);
 
-	return psize;
+	return len;
 }
 
 void print_debug_log(const char *form ,...)
@@ -864,13 +888,9 @@ int proc_template_edit(tmplat_list *tpcfg, struct ubus_request_data *req)
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
-			if (tpcfg->id == ap->apinfo.id_guest){
-				memset(&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof(ap_ssid_info));
-				memcpy(&(ap->apinfo.wifi_info.ssid_info_guest),&(tpcfg->tmplat_ssid_info),sizeof(ap_ssid_info));
-				change = true;
-			}else{
-				memset(&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof(ap_ssid_info));
-				memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tpcfg->tmplat_ssid_info),sizeof(ap_ssid_info));
+			if ((tpcfg->id & ap->apinfo.id)){
+				memset(&(ap->apinfo.wifi_info.ssid_info[tpcfg->id]),'\0',sizeof(ap_ssid_info));
+				memcpy(&(ap->apinfo.wifi_info.ssid_info[tpcfg->id]),&(tpcfg->tmplat_ssid_info),sizeof(ap_ssid_info));
 				change =true;
 			}
 			
@@ -919,14 +939,13 @@ void format_ap_cfg(ap_status_entry *ap, char *res)
 	sprintf (tbuf + strlen (tbuf), "|sn=%s", ap->apinfo.sn);
 	sprintf (tbuf + strlen (tbuf), "|model=%s", ap->apinfo.model);
 	sprintf (tbuf + strlen (tbuf), "|id=%d", ap->apinfo.id);
-	sprintf (tbuf + strlen (tbuf), "|id_guest=%d", ap->apinfo.id_guest);
 	sprintf (tbuf + strlen (tbuf), "|txpower=%s", ap->apinfo.wifi_info.txpower);
 	sprintf (tbuf + strlen (tbuf), "|hver=%s", ap->apinfo.hver);
 	sprintf (tbuf + strlen (tbuf), "|sver=%s", ap->apinfo.sver);
 	sprintf (tbuf + strlen (tbuf), "|aip=%s", ap->apinfo.aip);
 	sprintf (tbuf + strlen (tbuf), "|channel=%s", ap->apinfo.wifi_info.channel);
 	strncpy (res, tbuf, strlen (tbuf));
-	res[strlen (res)] = 0;
+	res[strlen (res) -1] = '\0';
 	
 	return;
 }
@@ -943,9 +962,11 @@ static void template_to_blob(struct blob_buf *buf, tmplat_list *t)
 
 static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 {
+	int i;
 	char *str = NULL;
 	char *mac = NULL;
 	char mac_temp[32] = {'\0'};
+	char id_temp[16] = {'\0'};
 	void *arr = NULL;
 	
 	if (buf == NULL || ap == NULL){
@@ -966,6 +987,16 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	}
 	
 	blobmsg_add_u32 (buf, "online", ap->online);
+
+	for ( i = 0;i<=AP_MAX_BINDID;i++){
+		if (ap->apinfo.id & (0x01<<i)){
+			sprintf(id_temp+strlen(id_temp),"%d,",i);
+		}
+	}
+
+	id_temp[strlen(id_temp)-1] = '\0';
+	blobmsg_add_string (buf, "id", id_temp);
+
 	sprintf(mac_temp,"%02x:%02x:%02x:%02x:%02x:%02x",\
 		ap->apinfo.apmac[0]&0xff,\
 		ap->apinfo.apmac[1]&0xff,\
@@ -1001,8 +1032,6 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 		blobmsg_close_array (buf, arr);
 	}
 
-	blobmsg_add_u32 (buf, "id",ap->apinfo.id);
-	blobmsg_add_u32 (buf, "id_guest",ap->apinfo.id_guest);
 	
 	return;
 }
@@ -1075,11 +1104,13 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	
 	int len;
 	int i = 0;
-	char res[1024] = {0};
-	char index[64] = {0};
-	char id[32][8] = {{0}};
+	unsigned char temp_id = 0x00;
+	char temp_buf[64] = {'\0'};
+	char res[1024] = {'\0'};
+	char index[64] = {'\0'};
+	char id[32][8] = {{'\0'}};
 	int template_id;
-	unsigned char mac_value[ETH_ALEN] = {0};
+	unsigned char mac_value[ETH_ALEN] = {'\0'};
 	char *mac = NULL;
 	char *channel = NULL;
 	char *txpower = NULL;
@@ -1136,6 +1167,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 
 		memset (ap->apinfo.wifi_info.channel, '\0', sizeof (ap->apinfo.wifi_info.channel));
 		strncpy (ap->apinfo.wifi_info.channel, channel, strlen (channel));
+		ap->apinfo.wifi_info.channel[strlen (ap->apinfo.wifi_info.channel) - 1] = '\0';
 	}
 	
 	if (txpower != NULL && txpower[0] != 0){	
@@ -1163,7 +1195,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		}
 		
 		if ( i > AP_MAX_BINDID){
-			blobmsg_add_string (&b, "msg", "Max bind 2 template at the same time!");
+			blobmsg_add_string (&b, "msg", "Max bind 8 template at the same time!");
 			goto error;
 		}
 	}
@@ -1171,21 +1203,20 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	for (i = 0; id[i][0] != 0; i++){
 		template_id = atoi(&id[i][0]);
 		if ((tpl = find_template (template_id)) == NULL){
+			sprintf(temp_buf,"%d not exist!",template_id);
+			blobmsg_add_string (&b, "template_id", temp_buf);
 			continue;
 		}
 
-		memset (&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof (ap_ssid_info));
-		memset (&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof (ap_ssid_info));
-		
-		if (atoi(&id[i][0]) == 0 ){
-			ap->apinfo.id = template_id;
-		}else{
-			ap->apinfo.id_guest = template_id;
-		}	
-		memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tpl->tmplat_ssid_info),sizeof(ap_ssid_info));
+		memset (&(ap->apinfo.wifi_info.ssid_info[i]),'\0',sizeof (ap_ssid_info));
+		temp_id = temp_id | (0x01 << template_id);  //bit set,0~7bit <->0~7 templateid
+		memcpy(&(ap->apinfo.wifi_info.ssid_info[template_id]),&(tpl->tmplat_ssid_info),sizeof(ap_ssid_info));
 	}
 
-	apinfo_to_json_string (&b, ap);
+	if (temp_id >0){
+		ap->apinfo.id = temp_id;
+	}
+
 	format_ap_cfg (ap, res);
 	sprintf(index,"mac=%02x:%02x:%02x:%02x:%02x:%02x",\
 		ap->apinfo.apmac[0]&0xff,\
@@ -1204,6 +1235,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		goto error;
 	}
 
+    apinfo_to_json_string (&b, ap);
 	blobmsg_add_u32 (&b, "code", 0);
 	
 	return ubus_send_reply (ctx, req, b.head);
@@ -1371,17 +1403,16 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
-			if (tp->id == ap->apinfo.id_guest){
-				memset(&(ap->apinfo.wifi_info.ssid_info_guest),'\0',sizeof(ap_ssid_info));
-				ap->apinfo.id_guest = ILLEGAL_TMPLATE_ID;
-				change = TRUE;
-			}else{
-				memset(&(ap->apinfo.wifi_info.ssid_info),'\0',sizeof(ap_ssid_info));
+			if ((tp->id & ap->apinfo.id)){
+				memset(&(ap->apinfo.wifi_info.ssid_info[tp->id]),'\0',sizeof(ap_ssid_info));
+				ap->apinfo.id = ap->apinfo.id ^ (0x01 << tp->id);
 				
-				if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL){
-					memcpy(&(ap->apinfo.wifi_info.ssid_info),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
-					ap->apinfo.id = DEFAULT_TMPLATE_ID;
-					change =TRUE;
+				if (ap->apinfo.id == DEFAULT_TMPLATE_ID){
+					if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL){
+						memcpy(&(ap->apinfo.wifi_info.ssid_info[DEFAULT_TMPLATE_ID]),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
+						ap->apinfo.id = ap->apinfo.id | (0x01<<DEFAULT_TMPLATE_ID);
+						change =TRUE;
+					}
 				}
 			}
 			
@@ -1537,6 +1568,11 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 		id++;
 	}
 	
+	if ( id > MAX_TMP_ID){
+		blobmsg_add_string (&b, "msg", "Max have eight template!");
+		goto error;
+	}
+
 	if (tpname != NULL && tpname[0] != 0){
 		strcpy(p.tpname, tpname);
 	}
