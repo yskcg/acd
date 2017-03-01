@@ -484,6 +484,8 @@ void fill_encode_data(ap_status_entry *apcfg, char *tagname, char *value)
 		strcpy (value, apcfg->cmd.addr);
 	}else if (strcasecmp (tagname, "md5") == 0){
 		strcpy (value, apcfg->cmd.md5);
+	}else if (strcasecmp (tagname, "aip") == 0){
+		strcpy (value, apcfg->apinfo.aip);
 	}
 	return;
 }
@@ -834,22 +836,24 @@ int send_data_to_ap (ap_status_entry * ap)
 		return -1;
 	}
 
-	/*temp method,after will change method*/
-	memset(temp_ssid,'\0',sizeof(temp_ssid));
-	memset(temp_encrypt,'\0',sizeof(temp_encrypt));
-	memset(temp_key,'\0',sizeof(temp_key));
+	if (ap->ud.type == AP_INFO && ap->ud.session == SPROTO_REQUEST){
+		/*temp method,after will change method*/
+		memset(temp_ssid,'\0',sizeof(temp_ssid));
+		memset(temp_encrypt,'\0',sizeof(temp_encrypt));
+		memset(temp_key,'\0',sizeof(temp_key));
 
-	for (i = 0; i<=MAX_TMP_ID; i++){
-		if(ap->apinfo.id & (0x01<<i)){
-			sprintf(temp_ssid+strlen((const char *)temp_ssid),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].ssid[0]));
-			sprintf(temp_encrypt+strlen((const char *)temp_encrypt),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].encrypt[0]));
-			sprintf(temp_key+strlen((const char *)temp_key),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].key[0]));
+		for (i = 0; i<=MAX_TMP_ID; i++){
+			if(ap->apinfo.id & (0x01<<i)){
+				sprintf(temp_ssid+strlen((const char *)temp_ssid),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].ssid[0]));
+				sprintf(temp_encrypt+strlen((const char *)temp_encrypt),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].encrypt[0]));
+				sprintf(temp_key+strlen((const char *)temp_key),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].key[0]));
+			}
 		}
-	}
 
-	temp_ssid[strlen((const char *)temp_ssid)-1] = '\0';
-	temp_encrypt[strlen((const char *)temp_encrypt)-1] = '\0';
-	temp_key[strlen((const char *)temp_key)-1] = '\0';
+		temp_ssid[strlen((const char *)temp_ssid)-1] = '\0';
+		temp_encrypt[strlen((const char *)temp_encrypt)-1] = '\0';
+		temp_key[strlen((const char *)temp_key)-1] = '\0';
+	}
 
 	psize = sproto_encode_data (&ap->ud, res);
 	if (ap->fd <= 0){
@@ -945,7 +949,7 @@ void format_ap_cfg(ap_status_entry *ap, char *res)
 	sprintf (tbuf + strlen (tbuf), "|aip=%s", ap->apinfo.aip);
 	sprintf (tbuf + strlen (tbuf), "|channel=%s", ap->apinfo.wifi_info.channel);
 	strncpy (res, tbuf, strlen (tbuf));
-	res[strlen (res) -1] = '\0';
+	res[strlen (res)] = '\0';
 	
 	return;
 }
@@ -1111,6 +1115,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	char id[32][8] = {{'\0'}};
 	int template_id;
 	unsigned char mac_value[ETH_ALEN] = {'\0'};
+	char *temp_p = NULL;
 	char *mac = NULL;
 	char *channel = NULL;
 	char *txpower = NULL;
@@ -1160,26 +1165,37 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	if (channel != NULL && channel[0] != 0){
 		if(strcasecmp("auto", channel) != 0){
 			if (atoi(channel) > 13 || atoi(channel) < 1){
-				blobmsg_add_string (&b, "msg", "channel invalid!");
+				blobmsg_add_string (&b, "msg", "channel invalid 1~12 or auto available!");
 				goto error;
 			}
 		}
 
+		temp_p = strstr(channel,".");
+		if ( temp_p !=NULL ){
+			blobmsg_add_string (&b, "msg", "channel invalid 1~12 or auto available!");
+			goto error;
+		}
+
 		memset (ap->apinfo.wifi_info.channel, '\0', sizeof (ap->apinfo.wifi_info.channel));
 		strncpy (ap->apinfo.wifi_info.channel, channel, strlen (channel));
-		ap->apinfo.wifi_info.channel[strlen (ap->apinfo.wifi_info.channel) - 1] = '\0';
 	}
-	
-	if (txpower != NULL && txpower[0] != 0){	
-		if (atoi(txpower) > 21 || atoi(txpower) < 1){
+
+	if (txpower != NULL && txpower[0] != 0){
+		if (atoi(txpower) > 20 || atoi(txpower) < 1){
 			blobmsg_add_string (&b, "msg", "txpower invalid!");
 			goto error;
 		}
-		
+
+		temp_p = strstr(txpower,".");
+		if ( temp_p !=NULL ){
+			blobmsg_add_string (&b, "msg", "txpower invalid 1~20  available!");
+			goto error;
+		}
+
 		memset (ap->apinfo.wifi_info.txpower, '\0', sizeof (ap->apinfo.wifi_info.txpower));
 		strncpy (ap->apinfo.wifi_info.txpower, txpower, strlen (txpower));
 	}
-	
+
 	if (apname != NULL && apname[0] != 0){
 		memset (ap->apname, '\0', sizeof (ap->apname));
 		strncpy (ap->apname, apname, strlen (apname));

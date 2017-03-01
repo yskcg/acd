@@ -160,8 +160,6 @@ int aplist_entry_hash(u8_t *addr)
 	/* use 1 byte of OUI and 3 bytes of NIC */
 	u32 key = get_unaligned_32((const u8_t *)(addr + 2));
 	hash_value = jhash_1word(key, ap_listdb_salt) & (AP_HASH_SIZE - 1);
-	print_debug_log("hash_value:%d,salt:%d,key:%d,addr:0x%2x:0x%2x:0x%2x:0x%2x:0x%2x:0x%2x\n",hash_value,ap_listdb_salt,key,\
-		addr[0]&0xff,addr[1]&0xff,addr[2]&0xff,addr[3]&0xff,addr[4]&0xff,addr[5]&0xff);
 	
 	return hash_value;
 }
