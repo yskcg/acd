@@ -34,6 +34,7 @@
 #define ENCODE_MAXSIZE		0x1000000
 #define ENCODE_DEEPLEVEL 	64
 #define BUFLEN 			    1024 * 2
+#define TEMP_SSID_BUF_SIZE  512
 #define INET_ADDRSTRLEN 	16
 #define AP_STATUS		    1
 #define AP_INFO			    2
@@ -51,7 +52,7 @@
 #define AP_MAX_BINDID       7
 #define ILLEGAL_TMPLATE_ID  -1
 #define DEFAULT_TMPLATE_ID  0
-#define DEFAULT_TMPLATE_ID_MAP 1
+#define DEFAULT_TMPLATE_ID_MAP 0x01
 #define DEFAULT_TMP_GUEST_ID 1
 #define MAX_TMP_ID          7
 #define AC_INIT_OFFLINE     0
