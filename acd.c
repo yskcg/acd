@@ -148,6 +148,29 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
 	print_debug_log("[debug] [New connection] [peer ip:%s fd:%d]\n", inet_ntoa(cl->sin.sin_addr), sfd);
 }
 
+
+int is_digit_string(char * string)
+{
+	int res = IS_DIGIT_STRING_ERR;
+	int len = 0;
+	char tem_buf[64] = {'\0'};
+
+	if (string == NULL){
+		return res;
+	}
+
+	len = strlen (string);
+	sprintf(tem_buf,"%d",atoi(string));
+	if (len != strlen(tem_buf)){
+		res = IS_DIGIT_STRING_ERR;
+		return res;
+	}
+
+	res = IS_DIGIT_STRING;
+
+	return res;
+}
+
 void aplist_init(void)
 {
 	
@@ -234,6 +257,8 @@ void aplist_init(void)
 				if (ap->apinfo.id & (0x01<<i)){
 					if ((tp = find_template(i)) != NULL){
 						memcpy(&(ap->apinfo.wifi_info.ssid_info[i]),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
+					}else{
+						clear_bit(ap->apinfo.id,i);
 					}
 				}
 			}
@@ -316,7 +341,7 @@ void tplist_init(void)
 				p_key_value = strtok (NULL, "|");
 			}
 			
-			insert_template (&tp);
+			insert_template_by_id (&tp);
 			memset (&tp, '\0', sizeof (tmplat_list));
 		}
 		memset(buf,'\0',sizeof(512));
@@ -795,7 +820,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 	if (ap->ud.session == SPROTO_RESPONSE && ap->ud.ok == RESPONSE_OK){
 		ap->ud.ok = 0;
 		if (ap->ud.type == AP_CMD){
-			free(ap);
+			free_mem(ap);
 			return ACd_STATUS_REBOOT_OK;
 		}
 		print_debug_log ("[debug] <receive> [response pack]\n");
@@ -1115,7 +1140,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	char id[32][8] = {{'\0'}};
 	int template_id;
 	unsigned char mac_value[ETH_ALEN] = {'\0'};
-	char *temp_p = NULL;
+	char is_digit = IS_DIGIT_STRING_ERR;
 	char *mac = NULL;
 	char *channel = NULL;
 	char *txpower = NULL;
@@ -1164,20 +1189,21 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	
 	if (channel != NULL && channel[0] != 0){
 		if(strcasecmp("auto", channel) != 0){
-			if (atoi(channel) > 13 || atoi(channel) < 1){
-				blobmsg_add_string (&b, "msg", "channel invalid 1~12 or auto available!");
+			is_digit = is_digit_string(channel);
+			if ( is_digit != IS_DIGIT_STRING){
+				blobmsg_add_string (&b, "msg", "channel invalid 1~13 or auto available!");
 				goto error;
+			}else{
+				if (atoi(channel) > 13 || atoi(channel) < 1){
+					blobmsg_add_string (&b, "msg", "channel invalid 1~13 or auto available!");
+					goto error;
+				}
 			}
-		}
-
-		temp_p = strstr(channel,".");
-		if ( temp_p !=NULL ){
-			blobmsg_add_string (&b, "msg", "channel invalid 1~12 or auto available!");
-			goto error;
 		}
 
 		memset (ap->apinfo.wifi_info.channel, '\0', sizeof (ap->apinfo.wifi_info.channel));
 		strncpy (ap->apinfo.wifi_info.channel, channel, strlen (channel));
+
 	}
 
 	if (txpower != NULL && txpower[0] != 0){
@@ -1186,8 +1212,9 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 			goto error;
 		}
 
-		temp_p = strstr(txpower,".");
-		if ( temp_p !=NULL ){
+		is_digit = IS_DIGIT_STRING_ERR;
+		is_digit = is_digit_string(txpower);
+		if ( is_digit != IS_DIGIT_STRING){
 			blobmsg_add_string (&b, "msg", "txpower invalid 1~20  available!");
 			goto error;
 		}
@@ -1225,7 +1252,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		}
 
 		memset (&(ap->apinfo.wifi_info.ssid_info[i]),'\0',sizeof (ap_ssid_info));
-		temp_id = temp_id | (0x01 << template_id);  //bit set,0~7bit <->0~7 templateid
+		set_bit(temp_id,template_id); //bit set,0~7bit <->0~7 templateid
 		memcpy(&(ap->apinfo.wifi_info.ssid_info[template_id]),&(tpl->tmplat_ssid_info),sizeof(ap_ssid_info));
 	}
 
@@ -1299,23 +1326,23 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	if (tb[TMPLATID]){
 		id = blobmsg_get_u32 (tb[TMPLATID]);
 	}
-	
+
 	if (tb[SSID]){
 		ssid = blobmsg_get_string (tb[SSID]);
 	}
-	
+
 	if (tb[ENCRYPT]){
 		encrypt = blobmsg_get_string (tb[ENCRYPT]);
 	}
-	
+
 	if (tb[KEY]){
 		key = blobmsg_get_string (tb[KEY]);
 	}
-	
+
 	if (tb[NAME]){
 		tpname = blobmsg_get_string (tb[NAME]);
 	}
-	
+
 	if (tb[EDIT_FLAG] ){
 		edit_temp0_flag = blobmsg_get_bool(tb[EDIT_FLAG]);
 	}
@@ -1340,8 +1367,13 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	}
 	
 	if (encrypt != NULL && encrypt[0] != 0){
-		strcpy (tp->tmplat_ssid_info.encrypt, encrypt);
-		
+		if (strcasecmp(encrypt,"psk") == 0 ){
+			strcpy (tp->tmplat_ssid_info.encrypt, encrypt);
+		}else{
+			blobmsg_add_string (&b, "msg", "the encrypt just support 'psk' method!");
+			goto error;
+		}
+
 		if (strcasecmp(tp->tmplat_ssid_info.encrypt, "none") != 0){
 			if (key == NULL || key[0] == 0){
 				blobmsg_add_string (&b, "msg", "need key");
@@ -1361,8 +1393,7 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	sprintf (index, "id=%d", id);
 	format_tmp_cfg (tp, res);
 	file_write(TP_LIST_FILE, index, res);
-	
-	
+
 	return proc_template_edit (tp, req);
 
 error:
@@ -1421,15 +1452,15 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
 			if ((tp->id & ap->apinfo.id)){
 				memset(&(ap->apinfo.wifi_info.ssid_info[tp->id]),'\0',sizeof(ap_ssid_info));
-				ap->apinfo.id = ap->apinfo.id ^ (0x01 << tp->id);
+				clear_bit(ap->apinfo.id,tp->id);
 				
 				if (ap->apinfo.id == DEFAULT_TMPLATE_ID){
 					if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL){
 						memcpy(&(ap->apinfo.wifi_info.ssid_info[DEFAULT_TMPLATE_ID]),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
-						ap->apinfo.id = ap->apinfo.id | (0x01<<DEFAULT_TMPLATE_ID);
-						change =TRUE;
+						set_bit(ap->apinfo.id,DEFAULT_TMPLATE_ID);
 					}
 				}
+				change =TRUE;
 			}
 			
 			if (change){
@@ -1457,6 +1488,8 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	sprintf (index, "id=%d", id);
 	file_spec_content_del(TP_LIST_FILE, index);
 	del_template (tplist, id);
+	/*sort the tplist file*/
+	file_sort_by_key(TP_LIST_FILE,3,"=");
 
 	blobmsg_add_u32 (&b, "code", 0);
 
@@ -1597,7 +1630,6 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 	p.id = id;
 
 	if (encrypt != NULL && encrypt[0] != 0){
-		strcpy (&(p.tmplat_ssid_info.encrypt[0]), encrypt);
 		/*need encrypt*/
 		if (strcasecmp(encrypt, "none") != 0){
 			if (key == NULL || key[0] == 0 ){
@@ -1610,6 +1642,13 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 				}
 				strcpy (&(p.tmplat_ssid_info.key[0]), key);
 			}
+
+			if (strcasecmp(encrypt,"psk") == 0 ){
+				strcpy (&(p.tmplat_ssid_info.encrypt[0]), encrypt);
+			}else{
+				blobmsg_add_string (&b, "msg", "the encrypt just support 'psk' method!");
+				goto error;
+			}
 			
 		}else{/*none*/
 			strcpy (&(p.tmplat_ssid_info.encrypt[0]), "none");
@@ -1620,13 +1659,15 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 		strcpy (&(p.tmplat_ssid_info.key[0]), "");
 	}
 	
-	if (insert_template (&p) <= 0){
+	if (insert_template_by_id (&p) <= 0){
 		goto error;
 	}
 	
 	sprintf (index, "id=%d", p.id);
 	format_tmp_cfg (&p, res);
 	file_write(TP_LIST_FILE, index, res);
+	/*sort the tplist file*/
+	file_sort_by_key(TP_LIST_FILE,3,"=");
 
 	blobmsg_add_u32 (&b, "code", 0);
 	
@@ -1694,7 +1735,6 @@ static int ubus_proc_apdel(struct ubus_context *ctx, struct ubus_object *obj,
 		goto end;
 	}
 	
-	print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 	sprintf (index, "mac=%s", mac);
 	aplist_entry_remove(mac_value);
 	file_spec_content_del(AP_LIST_FILE, index);
@@ -1758,9 +1798,6 @@ static int ubus_proc_apcmd(struct ubus_context *ctx, struct ubus_object *obj,
 				blobmsg_add_string (&b, "msg", "the sn not matched the mac address!");
 				print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 			}
-		}else{
-			ap = NULL;
-			blobmsg_add_string (&b, "msg", "need the sn!");
 		}
 		
 		if (ap == NULL){
@@ -1790,6 +1827,8 @@ static int ubus_proc_apcmd(struct ubus_context *ctx, struct ubus_object *obj,
 		ap->cmd.cmd = REBOOT;
 		if ((len = send_data_to_ap (ap)) <= 0){
 			goto error;
+		}else{
+			ap->cmd.status = AP_CMD_SENDED_FLAG;
 		}
 	}else if (strcasecmp(cmd, "upgrade") == 0){
 		
@@ -1823,7 +1862,7 @@ error:
 
 static const struct ubus_method acd_methods[] = {
 	UBUS_METHOD_MASK ("apinfo", ubus_proc_apinfo, apinfo_policy, 1 << MAC),
-	UBUS_METHOD_MASK ("apedit", ubus_proc_apedit, apedit_policy, 1 << MAC | 1 << NAME | 1 << TMPLATID | 1 << CHANNEL | 1 << TXPOWER),
+	UBUS_METHOD_MASK ("apedit", ubus_proc_apedit, apedit_policy, 1 << MAC | 1 << NAME | 1 << TMPLATID | 1 << CHANNEL | 1 << TXPOWER | 1<< AIP),
 	UBUS_METHOD_MASK ("templatedit", ubus_proc_templatedit, templatedit_policy, 1 << TMPLATID | 1 << SSID | 1 << ENCRYPT | 1 << NAME | 1 << KEY | 1<<EDIT_FLAG),
 	UBUS_METHOD_MASK ("templatelist", ubus_proc_templatelist, templatelist_policy, 1 << TMPLATID),
 	UBUS_METHOD_MASK ("templateadd", ubus_proc_templateadd, templateadd_policy, 1 << SSID | 1 << ENCRYPT | 1 << NAME | 1 << KEY),
