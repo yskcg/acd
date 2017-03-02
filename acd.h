@@ -11,10 +11,14 @@
 #define TP_LIST_FILE		"/etc/tplist"
 #define APC_SP_FILE		"/usr/share/apc.sp"
 
+#define set_bit(x,y) 		x = x | (0x1<<y)
+#define clear_bit(x,y)		x = x & (~(0x1<<y))
+
 extern tmplat_list *tplist;
 extern ap_list aplist;
 extern u32 ap_listdb_salt;
 
+int is_digit_string(char * string);
 void print_debug_log (const char *form, ...);
 void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len);
 void fill_encode_data(ap_status_entry *apcfg, char *tagname, char *value);

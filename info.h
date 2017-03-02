@@ -49,7 +49,7 @@
 #define AP_HASH_SIZE 		(1<<8)
 #define MAC_LEN			    100
 #define ETH_ALEN            6
-#define AP_MAX_BINDID       7
+#define AP_MAX_BINDID       8
 #define ILLEGAL_TMPLATE_ID  -1
 #define DEFAULT_TMPLATE_ID  0
 #define DEFAULT_TMPLATE_ID_MAP 0x01
@@ -58,6 +58,9 @@
 #define AC_INIT_OFFLINE     0
 #define AC_NEW_HASH_NODE    1
 #define AC_AP_HASH_NODE_ON  2
+#define AP_CMD_SENDED_FLAG  1
+#define IS_DIGIT_STRING     0
+#define IS_DIGIT_STRING_ERR 1     
 
 
 #ifndef container_of
@@ -168,7 +171,7 @@ typedef struct  {
 }ap_wifi_info;
 
 typedef struct ap_info {
-    char id;					        //表示对应认证、自定义模板id
+    unsigned char id;					//表示对应认证、自定义模板id
     char hver[32];					    //AP 对应的硬件版本号
     char sver[32];					    //AP 对应的软件版本号	
     char rip[16];					    //AP ac 服务器的ip地址
@@ -219,7 +222,7 @@ typedef struct {
 typedef struct tmplat_list
 {
     char 	tpname[64];
-    char	id;				    //模板id号
+    unsigned char	id;				    //模板id号
     ap_ssid_info tmplat_ssid_info;
     struct tmplat_list *rlink;
     struct tmplat_list *llink;

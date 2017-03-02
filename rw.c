@@ -30,7 +30,7 @@ int file_write(char *fname, char *index, char *value)
 
 int file_spec_content_del(char *fname, char *index)
 {
-	char shell_cmd[128] = {0};
+	char shell_cmd[128] = {'\0'};
 	
 	if( access(fname,F_OK) !=0){
 		return -1;
@@ -43,6 +43,22 @@ int file_spec_content_del(char *fname, char *index)
 		/*删除空白行*/
 		memset(shell_cmd,'\0',sizeof(shell_cmd));
 		sprintf(shell_cmd,"sed -i '/^\s*$/d' %s",fname);
+		system(shell_cmd);
+	}
+	
+	return 0;
+}
+
+int file_sort_by_key(char *fname,int filed,char *key)
+{
+	char shell_cmd[128] = {'\0'};
+	
+	if( access(fname,F_OK) !=0){
+		return -1;
+	}
+	
+	if (key !=NULL && filed >=0){
+		sprintf(shell_cmd,"sort -n -k %d -t \"%s\" \"%s\" -o \"%s\"",filed,key,fname,fname);
 		system(shell_cmd);
 	}
 	
@@ -63,7 +79,8 @@ tmplat_list *create_tplist(void)
 	return p;
 }
 
-int insert_template(tmplat_list *s)
+//list_add(struct list_head *_new, struct list_head *head)
+int insert_template_by_id(tmplat_list *s)
 {
 	tmplat_list *p = tplist, *t;
 

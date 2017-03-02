@@ -41,12 +41,13 @@
 /*file operation API*/
 extern int file_write(char *fname, char *tagname, char *value);
 extern int file_spec_content_del(char *fname, char *index);
+extern int file_sort_by_key(char *fname,int filed,char *key);
 
 /*list API*/
 extern tmplat_list *find_template(char id);
 extern void del_apmember(char *mac, char *sn);
 extern void del_template(tmplat_list *h, char id);
-extern int insert_template(tmplat_list *s);
+extern int insert_template_by_id(tmplat_list *s);
 extern tmplat_list *create_tplist(void);
 
 /*hash API*/
