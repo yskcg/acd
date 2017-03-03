@@ -29,9 +29,9 @@ status 1 {
 info 2 {
 	request {
 		ssid       0  : string
-		encrypt 1  : string
-		key 2  : string 
-		channel  3  : string
+		channel  1  : string
+		encrypt 2  : string
+		key 3  : string
 		txpower 4  : string
 		aip 5: string
 	}

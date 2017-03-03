@@ -335,7 +335,7 @@ void tplist_init(void)
 				}else if (strcasecmp (key, "encrypt") == 0){
 					strcpy(tp.tmplat_ssid_info.encrypt,value);
 				}else if (strcasecmp (key, "key") == 0){
-					strcpy(tp.tmplat_ssid_info.key,key);
+					strcpy(tp.tmplat_ssid_info.key,value);
 				}
 
 				p_key_value = strtok (NULL, "|");
@@ -1632,6 +1632,13 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 	if (encrypt != NULL && encrypt[0] != 0){
 		/*need encrypt*/
 		if (strcasecmp(encrypt, "none") != 0){
+			if (strcasecmp(encrypt,"psk") == 0 ){
+				strcpy (&(p.tmplat_ssid_info.encrypt[0]), encrypt);
+			}else{
+				blobmsg_add_string (&b, "msg", "the encrypt just support 'psk' method!");
+				goto error;
+			}
+
 			if (key == NULL || key[0] == 0 ){
 				blobmsg_add_string (&b, "msg", "Need key!");
 				goto error;
@@ -1642,14 +1649,6 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 				}
 				strcpy (&(p.tmplat_ssid_info.key[0]), key);
 			}
-
-			if (strcasecmp(encrypt,"psk") == 0 ){
-				strcpy (&(p.tmplat_ssid_info.encrypt[0]), encrypt);
-			}else{
-				blobmsg_add_string (&b, "msg", "the encrypt just support 'psk' method!");
-				goto error;
-			}
-			
 		}else{/*none*/
 			strcpy (&(p.tmplat_ssid_info.encrypt[0]), "none");
 			strcpy (&(p.tmplat_ssid_info.key[0]), "");
