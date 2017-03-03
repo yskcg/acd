@@ -292,6 +292,9 @@ void tplist_init(void)
 		return;
 	}
 
+	/*sort the tplist file*/
+	file_sort_by_key(TP_LIST_FILE,3,"=");
+
 	if ((fp = fopen(TP_LIST_FILE, "r")) == NULL){
 		return;
 	}
@@ -341,7 +344,7 @@ void tplist_init(void)
 
 				p_key_value = strtok (NULL, "|");
 			}
-			
+
 			insert_template_by_id (&tp);
 			memset (&tp, '\0', sizeof (tmplat_list));
 		}
@@ -918,7 +921,7 @@ int proc_template_edit(tmplat_list *tpcfg, struct ubus_request_data *req)
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
-			if ((tpcfg->id & ap->apinfo.id)){
+			if (((0x01 << tpcfg->id) & ap->apinfo.id)){
 				memset(&(ap->apinfo.wifi_info.ssid_info[tpcfg->id]),'\0',sizeof(ap_ssid_info));
 				memcpy(&(ap->apinfo.wifi_info.ssid_info[tpcfg->id]),&(tpcfg->tmplat_ssid_info),sizeof(ap_ssid_info));
 				change =true;
@@ -1396,6 +1399,8 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	sprintf (index, "id=%d", id);
 	format_tmp_cfg (tp, res);
 	file_write(TP_LIST_FILE, index, res);
+	/*sort the tplist file*/
+	file_sort_by_key(TP_LIST_FILE,3,"=");
 
 	return proc_template_edit (tp, req);
 
@@ -1453,7 +1458,7 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
-			if ((tp->id & ap->apinfo.id)){
+			if (((0x01 << tp->id) & ap->apinfo.id)){
 				memset(&(ap->apinfo.wifi_info.ssid_info[tp->id]),'\0',sizeof(ap_ssid_info));
 				clear_bit(ap->apinfo.id,tp->id);
 				

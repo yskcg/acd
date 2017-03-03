@@ -80,40 +80,26 @@ tmplat_list *create_tplist(void)
 }
 
 //list_add(struct list_head *_new, struct list_head *head)
-int insert_template_by_id(tmplat_list *s)
+int insert_template_by_id(tmplat_list *t)
 {
-	tmplat_list *p = tplist, *t;
+	tmplat_list *p = NULL;
+	tmplat_list *s = NULL;
 
-	t = create_tplist ();
+	s = create_tplist ();
+
 	if (t == NULL || p == NULL || s == NULL){
 		return 0;
 	}
 	
-	strcpy (t->tpname, s->tpname);
-	t->id = s->id;
-	memcpy(&(t->tmplat_ssid_info),&(s->tmplat_ssid_info),sizeof(s->tmplat_ssid_info));
-	
-	if (p->rlink == NULL){
-		p->rlink = t;
-		t->llink = p;
-		return 1;
-	}
+	strcpy (s->tpname, t->tpname);
+	s->id = t->id;
+	memcpy(&(s->tmplat_ssid_info),&(t->tmplat_ssid_info),sizeof(t->tmplat_ssid_info));
 
 	while (1){
-		if (p != NULL){
-			if(p->id >= t->id){
-				t->rlink = p;
-				t->llink = p->llink;
-				p->llink->rlink = t;
-				p->llink = t;
-				break;
-			}else{
-				if (p->rlink == NULL){
-					p->rlink = t;
-					t->llink = p;
-					break;
-				}
-			}
+		if (p->rlink == NULL){
+			p->rlink = t;
+			t->llink = p;
+			break;
 		}
 
 		p = p->rlink;
