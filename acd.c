@@ -336,6 +336,7 @@ void tplist_init(void)
 					strcpy(tp.tmplat_ssid_info.encrypt,value);
 				}else if (strcasecmp (key, "key") == 0){
 					strcpy(tp.tmplat_ssid_info.key,value);
+					tp.tmplat_ssid_info.key[strlen(value)-1] = '\0';
 				}
 
 				p_key_value = strtok (NULL, "|");
@@ -1367,28 +1368,30 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	}
 	
 	if (encrypt != NULL && encrypt[0] != 0){
-		if (strcasecmp(encrypt,"psk") == 0 ){
-			strcpy (tp->tmplat_ssid_info.encrypt, encrypt);
-		}else{
-			blobmsg_add_string (&b, "msg", "the encrypt just support 'psk' method!");
-			goto error;
-		}
+		if (strcasecmp(encrypt, "none") != 0){
+			if (strcasecmp(encrypt,"psk") == 0 ){
+				strcpy (tp->tmplat_ssid_info.encrypt, encrypt);
+			}else{
+				blobmsg_add_string (&b, "msg", "the encrypt just support 'psk' method!");
+				goto error;
+			}
 
-		if (strcasecmp(tp->tmplat_ssid_info.encrypt, "none") != 0){
 			if (key == NULL || key[0] == 0){
 				blobmsg_add_string (&b, "msg", "need key");
 				goto error;
+			}else if(key != NULL && key[0] != 0){
+				if (strlen (key) < 8){
+					blobmsg_add_string (&b, "msg", "Invalid key");
+					goto error;
+				}
+				strcpy (tp->tmplat_ssid_info.key, key);
 			}
+		}else{
+			strcpy (tp->tmplat_ssid_info.encrypt, encrypt);
+			strcpy (tp->tmplat_ssid_info.key, "");
 		}
 	}
 	
-	if (key != NULL && key[0] != 0){
-		if (strlen (key) < 8){
-			blobmsg_add_string (&b, "msg", "Invalid key");
-			goto error;
-		}
-		strcpy (tp->tmplat_ssid_info.key, key);
-	}
 
 	sprintf (index, "id=%d", id);
 	format_tmp_cfg (tp, res);

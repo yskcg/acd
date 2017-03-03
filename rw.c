@@ -93,12 +93,29 @@ int insert_template_by_id(tmplat_list *s)
 	t->id = s->id;
 	memcpy(&(t->tmplat_ssid_info),&(s->tmplat_ssid_info),sizeof(s->tmplat_ssid_info));
 	
+	if (p->rlink == NULL){
+		p->rlink = t;
+		t->llink = p;
+		return 1;
+	}
+
 	while (1){
-		if (p->rlink == NULL){
-			p->rlink = t;
-			t->llink = p;
-			break;
+		if (p != NULL){
+			if(p->id >= t->id){
+				t->rlink = p;
+				t->llink = p->llink;
+				p->llink->rlink = t;
+				p->llink = t;
+				break;
+			}else{
+				if (p->rlink == NULL){
+					p->rlink = t;
+					t->llink = p;
+					break;
+				}
+			}
 		}
+
 		p = p->rlink;
 	}
 	return 1;
