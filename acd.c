@@ -995,7 +995,6 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	char *str = NULL;
 	char *mac = NULL;
 	char mac_temp[32] = {'\0'};
-	char id_temp[16] = {'\0'};
 	void *arr = NULL;
 	
 	if (buf == NULL || ap == NULL){
@@ -1017,14 +1016,15 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	
 	blobmsg_add_u32 (buf, "online", ap->online);
 
+	arr = blobmsg_open_array (buf, "id");
 	for ( i = 0;i<=AP_MAX_BINDID;i++){
 		if (ap->apinfo.id & (0x01<<i)){
-			sprintf(id_temp+strlen(id_temp),"%d,",i);
+			print_debug_log("%s %d i:%d apinfo:%d\n",__FUNCTION__,__LINE__,i,ap->apinfo.id);
+			blobmsg_add_u32 (buf, NULL, i);
 		}
 	}
 
-	id_temp[strlen(id_temp)-1] = '\0';
-	blobmsg_add_string (buf, "id", id_temp);
+	blobmsg_close_array (buf, arr);
 
 	sprintf(mac_temp,"%02x:%02x:%02x:%02x:%02x:%02x",\
 		ap->apinfo.apmac[0]&0xff,\
