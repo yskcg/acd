@@ -38,17 +38,17 @@
 # error "Can't determine endianness"
 #endif
 
+extern tmplat_list *tplist;
 /*file operation API*/
 extern int file_write(char *fname, char *tagname, char *value);
 extern int file_spec_content_del(char *fname, char *index);
 extern int file_sort_by_key(char *fname,int filed,char *key);
 
 /*list API*/
-extern tmplat_list *find_template(char id);
-extern void del_apmember(char *mac, char *sn);
-extern void del_template(tmplat_list *h, char id);
-extern int insert_template_by_id(tmplat_list *s);
-extern tmplat_list *create_tplist(void);
+extern tmplat_list *template_find_by_id(char id);
+extern void template_del_by_id(tmplat_list *h, char id);
+extern int template_insert_by_id(tmplat_list *t);
+extern tmplat_list *template_entry_init(void);
 
 /*hash API*/
 extern ap_status_entry *aplist_entry_find(struct hlist_head *head, u8_t *addr);

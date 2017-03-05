@@ -65,8 +65,8 @@ int file_sort_by_key(char *fname,int filed,char *key)
 	return 0;
 }
 
-/*doubule list operation API:create ,insert,del and find*/
-tmplat_list *create_tplist(void)
+/*doubule list operation API:init ,insert,del and find*/
+tmplat_list *template_entry_init(void)
 {
 	tmplat_list *p = (tmplat_list *) calloc (sizeof (tmplat_list), 1);
 	
@@ -80,25 +80,26 @@ tmplat_list *create_tplist(void)
 }
 
 //list_add(struct list_head *_new, struct list_head *head)
-int insert_template_by_id(tmplat_list *t)
+int template_insert_by_id(tmplat_list *t)
 {
-	tmplat_list *p = NULL;
+	tmplat_list *p = tplist;
 	tmplat_list *s = NULL;
 
-	s = create_tplist ();
+	s = template_entry_init ();
 
 	if (t == NULL || p == NULL || s == NULL){
 		return 0;
 	}
 	
-	strcpy (s->tpname, t->tpname);
-	s->id = t->id;
-	memcpy(&(s->tmplat_ssid_info),&(t->tmplat_ssid_info),sizeof(t->tmplat_ssid_info));
+	strcpy (s->tmplate_info.tpname, t->tmplate_info.tpname);
+	s->tmplate_info.id = t->tmplate_info.id;
+	memcpy(&(s->tmplate_info.tmplat_ssid_info),&(t->tmplate_info.tmplat_ssid_info),sizeof(t->tmplate_info.tmplat_ssid_info));
 
+	print_debug_log("%s,%d id:%d ssid:%s\n",__FUNCTION__,__LINE__,s->tmplate_info.id,s->tmplate_info.tmplat_ssid_info.ssid);
 	while (1){
 		if (p->rlink == NULL){
-			p->rlink = t;
-			t->llink = p;
+			p->rlink = s;
+			s->llink = p;
 			break;
 		}
 
@@ -107,7 +108,8 @@ int insert_template_by_id(tmplat_list *t)
 	return 1;
 }
 
-void del_template(tmplat_list *h, char id)
+
+void template_del_by_id(tmplat_list *h, char id)
 {
 	tmplat_list *p = h;
 	
@@ -120,7 +122,7 @@ void del_template(tmplat_list *h, char id)
 			break;
 		}
 		p = p->rlink;
-		if ( p->id !=id ){
+		if ( p->tmplate_info.id !=id ){
 			continue;
 		}
 		if (p->rlink != NULL){
@@ -137,7 +139,7 @@ void del_template(tmplat_list *h, char id)
 	return;
 }
 
-tmplat_list *find_template(char id)
+tmplat_list *template_find_by_id(char id)
 {
 	tmplat_list *p = tplist;
 
@@ -147,7 +149,7 @@ tmplat_list *find_template(char id)
 
 	while (p->rlink){
 		p = p->rlink;
-		if ( p->id == id ){
+		if ( p->tmplate_info.id == id ){
 			return p;
 		}
 	}

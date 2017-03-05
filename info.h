@@ -218,12 +218,15 @@ typedef struct {
     struct hlist_head		hash[AP_HASH_SIZE];
 }ap_list;
 
-
-typedef struct tmplat_list
-{
+typedef struct {
     char 	tpname[64];
     unsigned char	id;				    //模板id号
     ap_ssid_info tmplat_ssid_info;
+}tmp_info;
+
+typedef struct tmplat_list
+{
+    tmp_info tmplate_info;
     struct tmplat_list *rlink;
     struct tmplat_list *llink;
 }tmplat_list;

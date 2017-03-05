@@ -255,8 +255,8 @@ void aplist_init(void)
 
 			for ( i = 0;i<=AP_MAX_BINDID;i++){
 				if (ap->apinfo.id & (0x01<<i)){
-					if ((tp = find_template(i)) != NULL){
-						memcpy(&(ap->apinfo.wifi_info.ssid_info[i]),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
+					if ((tp = template_find_by_id(i)) != NULL){
+						memcpy(&(ap->apinfo.wifi_info.ssid_info[i]),&(tp->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
 					}else{
 						clear_bit(ap->apinfo.id,i);
 					}
@@ -330,22 +330,23 @@ void tplist_init(void)
 
 				/*fill data in the double link list node*/
 				if (strcasecmp(key, "name") == 0){
-					strcpy(tp.tpname,value);
+					strcpy(tp.tmplate_info.tpname,value);
 				}else if (strcasecmp (key, "id") == 0){
-					tp.id = (char )atoi(value);
+					tp.tmplate_info.id = (char )atoi(value);
 				}else if (strcasecmp (key, "ssid") == 0){
-					strcpy(tp.tmplat_ssid_info.ssid,value);
+					strcpy(tp.tmplate_info.tmplat_ssid_info.ssid,value);
 				}else if (strcasecmp (key, "encrypt") == 0){
-					strcpy(tp.tmplat_ssid_info.encrypt,value);
+					strcpy(tp.tmplate_info.tmplat_ssid_info.encrypt,value);
 				}else if (strcasecmp (key, "key") == 0){
-					strcpy(tp.tmplat_ssid_info.key,value);
-					tp.tmplat_ssid_info.key[strlen(value)-1] = '\0';
+					strcpy(tp.tmplate_info.tmplat_ssid_info.key,value);
+					tp.tmplate_info.tmplat_ssid_info.key[strlen(value)-1] = '\0';
 				}
 
 				p_key_value = strtok (NULL, "|");
 			}
 
-			insert_template_by_id (&tp);
+			template_insert_by_id (&tp);
+
 			memset (&tp, '\0', sizeof (tmplat_list));
 		}
 		memset(buf,'\0',sizeof(512));
@@ -714,8 +715,8 @@ int ap_online_proc(ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr)
 	
 	/*when the hash node is new creat,so,use the default tmplate id*/
 	if( ap->status ==AC_NEW_HASH_NODE ){
-		if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL){
-			memcpy(&(ap->apinfo.wifi_info.ssid_info[DEFAULT_TMPLATE_ID]),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
+		if ((tp = template_find_by_id (DEFAULT_TMPLATE_ID)) != NULL){
+			memcpy(&(ap->apinfo.wifi_info.ssid_info[DEFAULT_TMPLATE_ID]),&(tp->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
 		}
 	}
 	
@@ -921,9 +922,9 @@ int proc_template_edit(tmplat_list *tpcfg, struct ubus_request_data *req)
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
-			if (((0x01 << tpcfg->id) & ap->apinfo.id)){
-				memset(&(ap->apinfo.wifi_info.ssid_info[tpcfg->id]),'\0',sizeof(ap_ssid_info));
-				memcpy(&(ap->apinfo.wifi_info.ssid_info[tpcfg->id]),&(tpcfg->tmplat_ssid_info),sizeof(ap_ssid_info));
+			if (((0x01 << tpcfg->tmplate_info.id) & ap->apinfo.id)){
+				memset(&(ap->apinfo.wifi_info.ssid_info[tpcfg->tmplate_info.id]),'\0',sizeof(ap_ssid_info));
+				memcpy(&(ap->apinfo.wifi_info.ssid_info[tpcfg->tmplate_info.id]),&(tpcfg->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
 				change =true;
 			}
 			
@@ -945,11 +946,11 @@ void format_tmp_cfg(tmplat_list *tpcfg, char *res)
 {
 	char buf[1024] = { 0 };
 	
-	sprintf (buf + strlen (buf), "name=%s", tpcfg->tpname);
-	sprintf (buf + strlen (buf), "|id=%d", tpcfg->id);
-	sprintf (buf + strlen (buf), "|ssid=%s", tpcfg->tmplat_ssid_info.ssid);
-	sprintf (buf + strlen (buf), "|encrypt=%s", tpcfg->tmplat_ssid_info.encrypt);
-	sprintf (buf + strlen (buf), "|key=%s", tpcfg->tmplat_ssid_info.key);
+	sprintf (buf + strlen (buf), "name=%s", tpcfg->tmplate_info.tpname);
+	sprintf (buf + strlen (buf), "|id=%d", tpcfg->tmplate_info.id);
+	sprintf (buf + strlen (buf), "|ssid=%s", tpcfg->tmplate_info.tmplat_ssid_info.ssid);
+	sprintf (buf + strlen (buf), "|encrypt=%s", tpcfg->tmplate_info.tmplat_ssid_info.encrypt);
+	sprintf (buf + strlen (buf), "|key=%s", tpcfg->tmplate_info.tmplat_ssid_info.key);
 	strcpy (res, buf);
 	res[strlen (buf)] = 0;
 	
@@ -985,11 +986,11 @@ void format_ap_cfg(ap_status_entry *ap, char *res)
 
 static void template_to_blob(struct blob_buf *buf, tmplat_list *t)
 {
-	blobmsg_add_string (buf, "name", t->tpname);
-	blobmsg_add_u32 (buf, "id", t->id);
-	blobmsg_add_string (buf, "ssid", t->tmplat_ssid_info.ssid);
-	blobmsg_add_string (buf, "encrypt",  t->tmplat_ssid_info.encrypt);
-	blobmsg_add_string (buf, "key",  t->tmplat_ssid_info.key);
+	blobmsg_add_string (buf, "name", t->tmplate_info.tpname);
+	blobmsg_add_u32 (buf, "id", t->tmplate_info.id);
+	blobmsg_add_string (buf, "ssid", t->tmplate_info.tmplat_ssid_info.ssid);
+	blobmsg_add_string (buf, "encrypt",  t->tmplate_info.tmplat_ssid_info.encrypt);
+	blobmsg_add_string (buf, "key",  t->tmplate_info.tmplat_ssid_info.key);
 	return;
 }
 
@@ -1249,7 +1250,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	
 	for (i = 0; id[i][0] != 0; i++){
 		template_id = atoi(&id[i][0]);
-		if ((tpl = find_template (template_id)) == NULL){
+		if ((tpl = template_find_by_id (template_id)) == NULL){
 			sprintf(temp_buf,"%d not exist!",template_id);
 			blobmsg_add_string (&b, "template_id", temp_buf);
 			continue;
@@ -1257,7 +1258,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 
 		memset (&(ap->apinfo.wifi_info.ssid_info[i]),'\0',sizeof (ap_ssid_info));
 		set_bit(temp_id,template_id); //bit set,0~7bit <->0~7 templateid
-		memcpy(&(ap->apinfo.wifi_info.ssid_info[template_id]),&(tpl->tmplat_ssid_info),sizeof(ap_ssid_info));
+		memcpy(&(ap->apinfo.wifi_info.ssid_info[template_id]),&(tpl->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
 	}
 
 	if (temp_id >0){
@@ -1357,23 +1358,23 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	}
 	
 	/*the default template can't be modified by user*/
-	if ( ( id == 0  && edit_temp0_flag== false) || (tp = find_template (id)) == NULL){
+	if ( ( id == 0  && edit_temp0_flag== false) || (tp = template_find_by_id (id)) == NULL){
 		blobmsg_add_string (&b, "msg", "template id invalid");
 		goto error;
 	}
 	
 	if (ssid != NULL && ssid[0] != 0){
-		strcpy (tp->tmplat_ssid_info.ssid, ssid);
+		strcpy (tp->tmplate_info.tmplat_ssid_info.ssid, ssid);
 	}
 	
 	if (tpname != NULL && tpname[0] != 0){
-		strcpy (tp->tpname, tpname);
+		strcpy (tp->tmplate_info.tpname, tpname);
 	}
 	
 	if (encrypt != NULL && encrypt[0] != 0){
 		if (strcasecmp(encrypt, "none") != 0){
 			if (strcasecmp(encrypt,"psk") == 0 ){
-				strcpy (tp->tmplat_ssid_info.encrypt, encrypt);
+				strcpy (tp->tmplate_info.tmplat_ssid_info.encrypt, encrypt);
 			}else{
 				blobmsg_add_string (&b, "msg", "the encrypt just support 'psk' method!");
 				goto error;
@@ -1387,11 +1388,11 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 					blobmsg_add_string (&b, "msg", "Invalid key");
 					goto error;
 				}
-				strcpy (tp->tmplat_ssid_info.key, key);
+				strcpy (tp->tmplate_info.tmplat_ssid_info.key, key);
 			}
 		}else{
-			strcpy (tp->tmplat_ssid_info.encrypt, encrypt);
-			strcpy (tp->tmplat_ssid_info.key, "");
+			strcpy (tp->tmplate_info.tmplat_ssid_info.encrypt, encrypt);
+			strcpy (tp->tmplate_info.tmplat_ssid_info.key, "");
 		}
 	}
 	
@@ -1450,7 +1451,7 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		goto error;
 	}
 	
-	if ((tp = find_template (id)) == NULL){
+	if ((tp = template_find_by_id (id)) == NULL){
 		blobmsg_add_string (&b, "msg", "id error,not found this template");
 		goto error;
 	}
@@ -1458,13 +1459,14 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
-			if (((0x01 << tp->id) & ap->apinfo.id)){
-				memset(&(ap->apinfo.wifi_info.ssid_info[tp->id]),'\0',sizeof(ap_ssid_info));
-				clear_bit(ap->apinfo.id,tp->id);
+			if (((0x01 << tp->tmplate_info.id) & ap->apinfo.id)){
+				print_debug_log("%s %d tpid:%d apid:%d\n",__FUNCTION__,__LINE__,tp->tmplate_info.id,ap->apinfo.id);
+				memset(&(ap->apinfo.wifi_info.ssid_info[tp->tmplate_info.id]),'\0',sizeof(ap_ssid_info));
+				clear_bit(ap->apinfo.id,tp->tmplate_info.id);
 				
 				if (ap->apinfo.id == DEFAULT_TMPLATE_ID){
-					if ((tp = find_template (DEFAULT_TMPLATE_ID)) != NULL){
-						memcpy(&(ap->apinfo.wifi_info.ssid_info[DEFAULT_TMPLATE_ID]),&(tp->tmplat_ssid_info),sizeof(ap_ssid_info));
+					if ((tp = template_find_by_id (DEFAULT_TMPLATE_ID)) != NULL){
+						memcpy(&(ap->apinfo.wifi_info.ssid_info[DEFAULT_TMPLATE_ID]),&(tp->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
 						set_bit(ap->apinfo.id,DEFAULT_TMPLATE_ID);
 					}
 				}
@@ -1495,7 +1497,7 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	memset(index,'\0',sizeof(index));
 	sprintf (index, "id=%d", id);
 	file_spec_content_del(TP_LIST_FILE, index);
-	del_template (tplist, id);
+	template_del_by_id (tplist, id);
 	/*sort the tplist file*/
 	file_sort_by_key(TP_LIST_FILE,3,"=");
 
@@ -1532,7 +1534,9 @@ static int ubus_proc_templatelist(struct ubus_context *ctx, struct ubus_object *
 			struct blob_attr *msg)
 {
 	struct blob_attr *tb[__CFG_MAX];
+	tmp_info tmp_array[MAX_TMP_ID+1] = {'\0'};
 	int id = ILLEGAL_TMPLATE_ID ;
+	int i ;
 	tmplat_list *tp = tplist;
 	tmplat_list *p = NULL;
 	void *arr = NULL;
@@ -1542,7 +1546,7 @@ static int ubus_proc_templatelist(struct ubus_context *ctx, struct ubus_object *
 	
 	if (tb[TMPLATID]){
 		id = blobmsg_get_u32 (tb[TMPLATID]);
-		p = find_template (id);
+		p = template_find_by_id (id);
 	}
 
 	blob_buf_init (&b, 0);
@@ -1563,11 +1567,23 @@ static int ubus_proc_templatelist(struct ubus_context *ctx, struct ubus_object *
 	/*show all template list*/
 	while (tp->rlink){
 		tp = tp->rlink;
-		table = blobmsg_open_table (&b, &tp->id);
-		template_to_blob (&b, tp);
+		memcpy(&tmp_array[tp->tmplate_info.id],&(tp->tmplate_info),sizeof(tmp_info));
+		print_debug_log("%s,%d id:%d,tp:%d\n",__FUNCTION__,__LINE__,tmp_array[tp->tmplate_info.id].id,tp->tmplate_info.id);
+	}
+
+	for(i = 0;i<=MAX_TMP_ID;i++){
+		if(tmp_array[i].id != i){
+			continue;
+		}
+		table = blobmsg_open_table (&b, &tmp_array[i].id);
+		blobmsg_add_string (&b, "name", tmp_array[i].tpname);
+		blobmsg_add_u32 (&b, "id", tmp_array[i].id);
+		blobmsg_add_string (&b, "ssid", tmp_array[i].tmplat_ssid_info.ssid);
+		blobmsg_add_string (&b, "encrypt",  tmp_array[i].tmplat_ssid_info.encrypt);
+		blobmsg_add_string (&b, "key",  tmp_array[i].tmplat_ssid_info.key);
 		blobmsg_close_table (&b, table);
 	}
-	
+
 	blobmsg_close_array (&b, arr);
 
 	return ubus_send_reply (ctx, req, b.head);
@@ -1619,7 +1635,7 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 		goto error;
 	}
 	while (1){
-		if ((tpl = find_template(id)) == NULL){
+		if ((tpl = template_find_by_id(id)) == NULL){
 			break;
 		}
 		id++;
@@ -1631,17 +1647,17 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 	}
 
 	if (tpname != NULL && tpname[0] != 0){
-		strcpy(p.tpname, tpname);
+		strcpy(p.tmplate_info.tpname, tpname);
 	}
 	
-	strcpy (&(p.tmplat_ssid_info.ssid[0]), ssid);
-	p.id = id;
+	strcpy (&(p.tmplate_info.tmplat_ssid_info.ssid[0]), ssid);
+	p.tmplate_info.id = id;
 
 	if (encrypt != NULL && encrypt[0] != 0){
 		/*need encrypt*/
 		if (strcasecmp(encrypt, "none") != 0){
 			if (strcasecmp(encrypt,"psk") == 0 ){
-				strcpy (&(p.tmplat_ssid_info.encrypt[0]), encrypt);
+				strcpy (&(p.tmplate_info.tmplat_ssid_info.encrypt[0]), encrypt);
 			}else{
 				blobmsg_add_string (&b, "msg", "the encrypt just support 'psk' method!");
 				goto error;
@@ -1655,22 +1671,22 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 					blobmsg_add_string (&b, "msg", "the key length must greater than or equal 8!");
 					goto error;
 				}
-				strcpy (&(p.tmplat_ssid_info.key[0]), key);
+				strcpy (&(p.tmplate_info.tmplat_ssid_info.key[0]), key);
 			}
 		}else{/*none*/
-			strcpy (&(p.tmplat_ssid_info.encrypt[0]), "none");
-			strcpy (&(p.tmplat_ssid_info.key[0]), "");
+			strcpy (&(p.tmplate_info.tmplat_ssid_info.encrypt[0]), "none");
+			strcpy (&(p.tmplate_info.tmplat_ssid_info.key[0]), "");
 		}
 	}else{/*default none encrypt*/
-		strcpy (&(p.tmplat_ssid_info.encrypt[0]), "none");
-		strcpy (&(p.tmplat_ssid_info.key[0]), "");
+		strcpy (&(p.tmplate_info.tmplat_ssid_info.encrypt[0]), "none");
+		strcpy (&(p.tmplate_info.tmplat_ssid_info.key[0]), "");
 	}
 	
-	if (insert_template_by_id (&p) <= 0){
+	if (template_insert_by_id (&p) <= 0){
 		goto error;
 	}
 	
-	sprintf (index, "id=%d", p.id);
+	sprintf (index, "id=%d", p.tmplate_info.id);
 	format_tmp_cfg (&p, res);
 	file_write(TP_LIST_FILE, index, res);
 	/*sort the tplist file*/
@@ -1953,7 +1969,7 @@ void acd_init(void)
 {
 	char buf[64] = {0};
 	
-	if ((tplist = create_tplist()) == NULL){
+	if ((tplist = template_entry_init()) == NULL){
 		exit (0);
 	}
 	
