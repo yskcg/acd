@@ -698,6 +698,7 @@ void free_mem(ap_status_entry *ap)
 	}
 
 	ap->online = OFF;
+	ap->status = AC_INIT_OFFLINE;
 	
 	if (ap->client_addr != NULL){
 		ustream_free (&ap->client_addr->s.stream);
