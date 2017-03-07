@@ -1256,7 +1256,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 			continue;
 		}
 
-		memset (&(ap->apinfo.wifi_info.ssid_info[i]),'\0',sizeof (ap_ssid_info));
+		memset (&(ap->apinfo.wifi_info.ssid_info[template_id]),'\0',sizeof (ap_ssid_info));
 		set_bit(temp_id,template_id); //bit set,0~7bit <->0~7 templateid
 		memcpy(&(ap->apinfo.wifi_info.ssid_info[template_id]),&(tpl->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
 	}
