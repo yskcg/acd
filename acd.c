@@ -7,6 +7,7 @@ static struct client 		*next_client = NULL;
 static struct sproto 		*spro_new = NULL;	//the protocol
 static struct ubus_context  *ctx;
 static struct blob_buf b;
+static struct uloop_timeout timeout;
 
 static char temp_ssid[TEMP_SSID_BUF_SIZE] = {'\0'};
 static char temp_key[TEMP_SSID_BUF_SIZE]  = {'\0'};
@@ -45,6 +46,25 @@ static void mac_string_to_value(unsigned char *mac,unsigned char *buf)
 			sscanf((const char *)mac+i*3,"%2x",&buf[i]);
 		}
 	}
+}
+
+int is_ip(const char *str)
+{
+    struct in_addr addr;
+    int ret;
+
+		if (str == NULL)
+			return -1;
+    ret = inet_pton(AF_INET, str, &addr);
+    return ret;
+}
+
+void set_ac_dns_address(struct uloop_timeout *t)
+{
+	system(". /usr/sbin/set_ac_dns_addr.sh");
+	uloop_timeout_set(t, 30000);
+
+	return;
 }
 
 static void client_read_cb(struct ustream *s, int bytes)
@@ -1016,6 +1036,7 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 		if (td > 30000) {// 30s
 			print_debug_log ("[debug] set offline for lost heartbeat %lu\n", td);
 			ap->online = OFF;
+			ap->status = AC_INIT_OFFLINE;
 		}
 	}
 	
@@ -2026,10 +2047,12 @@ int main(int argc, char **argv)
 	  return -1;
 	}
 	
+	timeout.cb = set_ac_dns_address;
 	ubus_add_uloop (ctx);
 	acd_init ();
 	run_server ();
 	server_main ();
+	uloop_timeout_set(&timeout, 3000);
 	uloop_run ();
 
 	ubus_free (ctx);

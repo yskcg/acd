@@ -10,6 +10,8 @@
 #define AP_LIST_FILE        	"/etc/aplist"
 #define TP_LIST_FILE		"/etc/tplist"
 #define APC_SP_FILE		"/usr/share/apc.sp"
+#define AC_DNS_DOMAIN  		"www.morewifi.ac.com"
+#define DEFAULT_DEVICE_IP	"192.168.33.111"
 
 #define set_bit(x,y) 		x = x | (0x1<<y)
 #define clear_bit(x,y)		x = x & (~(0x1<<y))
