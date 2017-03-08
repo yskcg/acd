@@ -1655,7 +1655,10 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 	if (ssid == NULL || ssid[0] == 0){
 		blobmsg_add_string (&b, "msg", "Need ssid!");
 		goto error;
+	}else if (strlen(ssid) > MAX_SSID_LEN){
+		blobmsg_add_string (&b, "msg", "SSID len must small to 32 bytes!");
 	}
+
 	while (1){
 		if ((tpl = template_find_by_id(id)) == NULL){
 			break;

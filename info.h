@@ -54,6 +54,7 @@
 #define DEFAULT_TMPLATE_ID  0
 #define DEFAULT_TMPLATE_ID_MAP 0x01
 #define DEFAULT_TMP_GUEST_ID 1
+#define MAX_SSID_LEN        33
 #define MAX_TMP_ID          7
 #define AC_INIT_OFFLINE     0
 #define AC_NEW_HASH_NODE    1
@@ -159,9 +160,9 @@ struct client {
 };
 
 typedef struct {
-    char ssid[128];					//AP 对应的ssid
-    char key[128];					//AP 对应无线密码
-    char encrypt[64];				//AP 对应的无线加密方式
+    char ssid[33];					//AP 对应的ssid
+    char key[33];					//AP 对应无线密码
+    char encrypt[33];				//AP 对应的无线加密方式
 }ap_ssid_info;
 
 typedef struct  {
