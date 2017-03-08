@@ -1657,6 +1657,7 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 		goto error;
 	}else if (strlen(ssid) > MAX_SSID_LEN){
 		blobmsg_add_string (&b, "msg", "SSID len must small to 32 bytes!");
+		goto error;
 	}
 
 	while (1){
@@ -1692,8 +1693,8 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 				blobmsg_add_string (&b, "msg", "Need key!");
 				goto error;
 			}else{
-				if (strlen(key) < 8){
-					blobmsg_add_string (&b, "msg", "the key length must greater than or equal 8!");
+				if (strlen(key) < 8 || strlen(key) > MAX_SSID_LEN){
+					blobmsg_add_string (&b, "msg", "the key length must greater than or equal 8,and must less than 32!");
 					goto error;
 				}
 				strcpy (&(p.tmplate_info.tmplat_ssid_info.key[0]), key);

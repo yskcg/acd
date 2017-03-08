@@ -54,7 +54,7 @@
 #define DEFAULT_TMPLATE_ID  0
 #define DEFAULT_TMPLATE_ID_MAP 0x01
 #define DEFAULT_TMP_GUEST_ID 1
-#define MAX_SSID_LEN        33
+#define MAX_SSID_LEN        32
 #define MAX_TMP_ID          7
 #define AC_INIT_OFFLINE     0
 #define AC_NEW_HASH_NODE    1
