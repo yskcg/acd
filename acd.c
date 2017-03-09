@@ -256,7 +256,7 @@ void aplist_init(void)
 				}
 				/*fill data in the hash node*/
 				if ( ap ){
-					ap->status = 0;    //init the aplist  set the status to zero
+					ap->status = AC_INIT_OFFLINE;    //init the aplist  set the status to zero
 					fill_data (ap, key, value, strlen (value));
 				}else{
 					break;
@@ -283,7 +283,7 @@ void aplist_init(void)
 				}
 			}
 
-			memset(buf,'\0',sizeof(512));
+			memset(buf,'\0',sizeof(buf));
 			ap = NULL ;
 		}	
 	}
@@ -550,26 +550,35 @@ void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 	}
 
 	if (strcasecmp (tagname, "hver") == 0){
+		memset(apcfg->apinfo.hver,'\0',sizeof(apcfg->apinfo.hver));
 		strncpy (apcfg->apinfo.hver, value, len);
 	}else if (strcasecmp (tagname, "model") == 0){
+		memset(apcfg->apinfo.model ,'\0',sizeof(apcfg->apinfo.model));
 		strncpy (apcfg->apinfo.model, value, len);
 	}else if (strcasecmp (tagname, "sver") == 0){
+		memset(apcfg->apinfo.sver ,'\0',sizeof(apcfg->apinfo.sver));
 		strncpy (apcfg->apinfo.sver, value, len);
 	}else if (strcasecmp (tagname, "sn") == 0){
+		memset(apcfg->apinfo.sn ,'\0',sizeof(apcfg->apinfo.sn));
 		strncpy (apcfg->apinfo.sn, value, len);
 	}else if (strcasecmp (tagname, "aip") == 0){
+		memset(apcfg->apinfo.aip ,'\0',sizeof(apcfg->apinfo.aip));
 		strncpy (apcfg->apinfo.aip, value, len);
 	}else if (strcasecmp (tagname, "mac") == 0){
+		memset(apcfg->apinfo.apmac ,0,sizeof(apcfg->apinfo.apmac));
 		mac_string_to_value((unsigned char *)value,mac_value);	
 		memcpy(apcfg->apinfo.apmac, mac_value, ETH_ALEN);
 	}else if (strcasecmp (tagname, "channel") == 0){
+		memset(apcfg->apinfo.wifi_info.channel ,'\0',sizeof(apcfg->apinfo.wifi_info.channel));
 		strncpy (apcfg->apinfo.wifi_info.channel, value,len);
 		apcfg->apinfo.wifi_info.channel[strlen(apcfg->apinfo.wifi_info.channel) -1] = '\0';
 	}else if (strcasecmp (tagname, "id") == 0){
 		apcfg->apinfo.id = atoi(value);
 	}else if (strcasecmp(tagname, "name") == 0){
+		memset(apcfg->apname ,'\0',sizeof(apcfg->apname));
 		strncpy(apcfg->apname, value, len);
 	}else if (strcasecmp(tagname, "txpower") == 0){
+		memset(apcfg->apinfo.wifi_info.txpower ,'\0',sizeof(apcfg->apinfo.wifi_info.txpower));
 		strncpy(apcfg->apinfo.wifi_info.txpower, value, len);
 	}else if (strcasecmp(tagname, "stamac") == 0){
 		if (apcfg->stamac == NULL){
@@ -786,6 +795,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 	
 	print_debug_log ("[debug] [rcv] [data len:%d, fd:%d]\n", len, cl->s.fd.fd);
 	
+	aplist_entry_init(p_temp_ap_info);
 	apl = &p_temp_ap_info;
 	apl->client_addr = cl;
 	apl->online = ON;
@@ -811,22 +821,6 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 			ap->online = apl->online;
 			if (ap->status == AC_NEW_HASH_NODE || ap->status == AC_INIT_OFFLINE){
 				status = AC_NEW_HASH_NODE;
-			}
-
-			/*ap is online ,judge the socket*/
-			if (ap->status == AC_AP_HASH_NODE_ON){
-				if (ap->fd != cl->s.fd.fd){					
-					if (ap->client_addr != NULL){
-						p_cltaddr = ap->client_addr;
-						ustream_free (&p_cltaddr->s.stream);
-						close (p_cltaddr->s.fd.fd);
-						p_cltaddr->s.fd.fd = 0;
-						free (p_cltaddr);
-					}
-					ap->client_addr = cl;
-					ap->fd = cl->s.fd.fd;	
-				}
-			}else{
 				ap->client_addr = cl;
 			}
 			
@@ -1988,7 +1982,7 @@ int aplist_hash_init(void)
 
 void aplist_entry_init(ap_status_entry aplist_node)
 {
-	memset(&aplist_node,0,sizeof(ap_status_entry));
+	memset(&aplist_node,'\0',sizeof(ap_status_entry));
 }
 
 void acd_init(void)

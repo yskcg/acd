@@ -201,6 +201,7 @@ ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8_t *addr)
 
 	aplist_node = (ap_status_entry *)calloc(1, sizeof(*aplist_node));;
 	if (aplist_node) {
+		memset(aplist_node,'\0',sizeof(ap_status_entry));
 		memcpy(aplist_node->apinfo.apmac, addr, ETH_ALEN);
 		aplist_node->status = AC_NEW_HASH_NODE;
 		aplist_node->apinfo.id = DEFAULT_TMPLATE_ID_MAP;
