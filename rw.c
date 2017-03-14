@@ -95,7 +95,7 @@ int template_insert_by_id(tmplat_list *t)
 	s->tmplate_info.id = t->tmplate_info.id;
 	memcpy(&(s->tmplate_info.tmplat_ssid_info),&(t->tmplate_info.tmplat_ssid_info),sizeof(t->tmplate_info.tmplat_ssid_info));
 
-	print_debug_log("%s,%d id:%d ssid:%s\n",__FUNCTION__,__LINE__,s->tmplate_info.id,s->tmplate_info.tmplat_ssid_info.ssid);
+	//print_debug_log("%s,%d id:%d ssid:%s\n",__FUNCTION__,__LINE__,s->tmplate_info.id,s->tmplate_info.tmplat_ssid_info.ssid);
 	while (1){
 		if (p->rlink == NULL){
 			p->rlink = s;
@@ -291,3 +291,115 @@ ap_status_entry *aplist_entry_insert(u8_t *addr)
 }
 
 
+/*API: For the station hash list*/
+
+int stalist_entry_hash(u8_t *addr)
+{
+	u32 hash_value;
+
+	/* use 1 byte of OUI and 3 bytes of NIC */
+	u32 key = get_unaligned_32((const u8_t *)(addr + 2));
+	hash_value = jhash_1word(key, sta_listdb_salt) & (AP_HASH_SIZE - 1);
+
+	return hash_value;
+}
+
+sta_entry *stalist_entry_creat(struct hlist_head *head,const u8_t *addr)
+{
+	sta_entry *stalist_node = NULL;
+	struct timeval node_tv;
+
+	if (!is_valid_ether_addr((const u8 *)addr)){
+		return NULL;
+	}
+
+	if (is_local_ether_addr((const u8 *)addr)){
+		return NULL;
+	}
+
+	stalist_node = (sta_entry *)calloc(1, sizeof(*stalist_node));;
+	if (stalist_node) {
+		/*The node operation*/
+		gettime(&stalist_node->time_stamp);
+		memcpy(stalist_node->mac, addr, ETH_ALEN);
+		hlist_add_head(&stalist_node->hlist, head);
+	}
+	return stalist_node;
+}
+
+void * stalist_entry_remove(u8_t *addr)
+{
+	struct hlist_head *head = NULL;
+	sta_entry *stalist_node = NULL;
+	struct hlist_node *tmp;
+
+	if (!is_valid_ether_addr((const u8 *)addr)){
+		return NULL;
+	}
+
+	if (is_local_ether_addr((const u8 *)addr)){
+		return NULL;
+	}
+
+	head = &stalist.hash[stalist_entry_hash(addr)];
+
+	hlist_for_each_entry_safe(stalist_node,tmp,head, hlist) {
+		if (ether_addr_equal((const u8 *)stalist_node->mac,(const u8 *)addr)){
+			/*del the node*/
+			hlist_del(&stalist_node->hlist);
+			free(stalist_node);
+			break;
+		}
+	}
+
+	return NULL;
+}
+
+sta_entry *stalist_entry_find(struct hlist_head *head, u8_t *addr)
+{
+	sta_entry *stalist_node = NULL;
+
+	if (!is_valid_ether_addr((const u8 *)addr)){
+		return NULL;
+	}
+
+	if (is_local_ether_addr((const u8 *)addr)){
+		return NULL;
+	}
+
+	hlist_for_each_entry(stalist_node, head, hlist) {
+		if (ether_addr_equal((const u8 *)stalist_node->mac,(const u8 *)addr)){
+			return stalist_node;
+		}
+	}
+
+	return NULL;
+}
+
+sta_entry *stalist_entry_insert(u8_t *addr)
+{
+	struct hlist_head *head = NULL;
+	sta_entry *stalist_node = NULL;
+
+	if (!is_valid_ether_addr((const u8 *)addr)){
+		return NULL;
+	}
+
+	if (is_local_ether_addr((const u8 *)addr)){
+		return NULL;
+	}
+
+	head = &stalist.hash[stalist_entry_hash(addr)];
+	stalist_node = stalist_entry_find(head,addr);
+
+	if(!stalist_node) {
+		stalist_node = stalist_entry_creat(head,addr);
+		if(!stalist_node){
+			return NULL;
+		}
+	}else{
+		gettime(&stalist_node->time_stamp);
+	}
+
+	return stalist_node;
+}

@@ -12,12 +12,14 @@ static struct uloop_timeout timeout;
 static char temp_ssid[TEMP_SSID_BUF_SIZE] = {'\0'};
 static char temp_key[TEMP_SSID_BUF_SIZE]  = {'\0'};
 static char temp_encrypt[TEMP_SSID_BUF_SIZE] = {'\0'};
-unsigned int ap_listdb_salt;
-ap_list aplist;	//ap information list
+u32 ap_listdb_salt;
+u32 sta_listdb_salt;
+ap_list 	aplist;							//ap information list
+sta_list 	stalist;						//station information list
 tmplat_list *tplist 	= NULL;
 static ap_status_entry p_temp_ap_info;
 
-static void gettime(struct timeval *tv)
+void gettime(struct timeval *tv)
 {
 	struct timespec ts;
 
@@ -62,7 +64,31 @@ int is_ip(const char *str)
 void set_ac_dns_address(struct uloop_timeout *t)
 {
 	system(". /usr/sbin/set_ac_dns_addr.sh");
-	uloop_timeout_set(t, 30000);
+	uloop_timeout_set(t, DNS_SET_INTERVAL);
+
+	return;
+}
+
+void check_station_status(struct uloop_timeout *t)
+{
+	int i;
+	long td;
+	struct timeval tv;
+	sta_entry *station = NULL;
+
+	for(i = 0;i < AP_HASH_SIZE;i++){
+		hlist_for_each_entry(station, &(stalist.hash[i]), hlist) {
+			gettime(&tv);
+			td = tv_diff(&tv, &station->time_stamp);
+
+			if (td > STATION_STATUS_CHECK_INTERVAL) {	//5 minute
+				print_debug_log ("[debug] remove the station after %lu\n", td);
+				stalist_entry_remove(station->mac);
+			}
+		}
+	}
+
+	uloop_timeout_set(t, STATION_STATUS_CHECK_INTERVAL);
 
 	return;
 }
@@ -130,6 +156,7 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
 	struct client *cl;
 	unsigned int sl = sizeof (struct sockaddr_in);
 	int sfd;
+	int so_reuseaddr = TRUE;
 	struct timeval timeout;
 
 	if (!next_client){
@@ -157,6 +184,8 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
 	timeout.tv_usec = 0;
 	setsockopt(sfd, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout));
 
+	/*set the sock reuse*/
+	setsockopt(sfd,SOL_SOCKET,SO_REUSEADDR,&so_reuseaddr,sizeof(so_reuseaddr));
 
 	cl->s.stream.string_data = true;
 	cl->s.stream.notify_read = client_read_cb;
@@ -542,8 +571,8 @@ void fill_encode_data(ap_status_entry *apcfg, char *tagname, char *value)
 
 void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 {
-	int slen = 0;
 	unsigned char mac_value[ETH_ALEN] = {0};
+	sta_entry *station = NULL;
 	
 	if (apcfg == NULL || strlen (value) == 0 || len == 0){
 		return;
@@ -581,25 +610,14 @@ void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 		memset(apcfg->apinfo.wifi_info.txpower ,'\0',sizeof(apcfg->apinfo.wifi_info.txpower));
 		strncpy(apcfg->apinfo.wifi_info.txpower, value, len);
 	}else if (strcasecmp(tagname, "stamac") == 0){
-		if (apcfg->stamac == NULL){
-			if ((apcfg->stamac = calloc(MAC_LEN, 1)) == NULL){
-				return;
-			}
-			apcfg->len = MAC_LEN;
-		}
-		
-		slen = strlen(apcfg->stamac);
-		if (apcfg->len - slen < 18){
-			apcfg->len += MAC_LEN;
-			if ((apcfg->stamac = realloc(apcfg->stamac, apcfg->len)) == NULL){
-				return;
+		/*insert the stalist hash list*/
+		mac_string_to_value((unsigned char *)value,mac_value);	
+		station = stalist_entry_insert(mac_value);
+		if (station){
+			if(apcfg->apinfo.apmac){
+				memcpy(station->ap_mac,apcfg->apinfo.apmac, ETH_ALEN);
 			}
 		}
-		
-		char buf[18] = {0};
-		strncpy(buf, value, len);
-		sprintf(apcfg->stamac + slen, "%s,", buf);
-		apcfg->stamac[slen + len + 1] = 0;
 	}
 	return;
 }
@@ -624,8 +642,7 @@ int sproto_parser_cb(void *ud, const char *tagname, int type, int index, struct 
 			}else if (strcasecmp (tagname, "apstatus") == 0){
 				apcfg->cmd.status = *(int *) value;
 			}
-			
-			print_debug_log ("[debug] [%s] [%d] [decode] [%s:] [%d]\n", __FUNCTION__,__LINE__, tagname, *(int *) value);
+
 			break;
 		
 		case SPROTO_TBOOLEAN:
@@ -641,14 +658,15 @@ int sproto_parser_cb(void *ud, const char *tagname, int type, int index, struct 
 		
 		case SPROTO_TSTRUCT:
 			r = sproto_decode (st, value, length, sproto_parser_cb, self);
-			
+			print_debug_log("%s %d,length:%d\n",__FUNCTION__,__LINE__,length);
 			if (r < 0 || r != length){
 				return r;
 			}
 			break;
 		
 		default:
-		print_debug_log ("[debug] [unknown type]\n");
+			print_debug_log ("[debug] [unknown type]\n");
+			break;
 	}
 	return 0;
 }
@@ -679,13 +697,6 @@ int sproto_parser(char *data, int headlen, struct encode_ud *ud)
 {
 	struct sproto_type *stype;
 	int len;
-	ap_status_entry *apcfg = container_of (ud, ap_status_entry, ud);
-
-	if (apcfg->stamac != NULL && ud->type == AP_STATUS){
-		free(apcfg->stamac);
-		apcfg->len = 0;
-		apcfg->stamac = NULL;
-	}
 	
 	if ((stype = sproto_protoquery(spro_new, ud->type, ud->session)) == NULL){
 		print_debug_log ("[debug] [error] [sproto_protoquery() failed!]\n");
@@ -721,13 +732,7 @@ void free_mem(ap_status_entry *ap)
 		free (ap->client_addr);
 		ap->client_addr = NULL;
 	}
-	
-	if (ap->stamac != NULL){
-		free(ap->stamac);
-		ap->stamac = NULL;
-		ap->len = 0;
-	}
-	
+
 	return;
 }
 
@@ -790,7 +795,6 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 	int headlen;
 	int status = 0;
 	char unpack[1024 * 6] = { 0 };
-	struct client *p_cltaddr =NULL;
 	ap_status_entry *apl = NULL, *ap = NULL;
 	
 	print_debug_log ("[debug] [rcv] [data len:%d, fd:%d]\n", len, cl->s.fd.fd);
@@ -826,12 +830,12 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 			
 			gettime(&ap->last_tv);
 			memcpy(&(ap->ud),&(apl->ud),sizeof(ecode_ud_spro));
-			/*update the ap info :hver,sver,sn,aip,model*/
+			/*update the ap info :hver,sver,sn,aip,model,stamac*/
 			strcpy(ap->apinfo.hver,apl->apinfo.hver);
 			strcpy(ap->apinfo.sver,apl->apinfo.sver);
 			strcpy(ap->apinfo.sn,apl->apinfo.sn);
 			strcpy(ap->apinfo.aip,apl->apinfo.aip);
-			strcpy(ap->apinfo.model,apl->apinfo.model);	
+			strcpy(ap->apinfo.model,apl->apinfo.model);
 		}else{
 			return -2;
 		}
@@ -1012,10 +1016,11 @@ static void template_to_blob(struct blob_buf *buf, tmplat_list *t)
 static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 {
 	int i;
-	char *str = NULL;
-	char *mac = NULL;
 	char mac_temp[32] = {'\0'};
 	void *arr = NULL;
+	long td;
+	struct timeval tv;
+	sta_entry *station = NULL;
 	
 	if (buf == NULL || ap == NULL){
 		return;
@@ -1024,11 +1029,10 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	blobmsg_add_string (buf, "name", ap->apname);
 
 	if (ap->online != OFF) {
-		struct timeval tv;
 		gettime(&tv);
-		long td = tv_diff(&tv, &ap->last_tv);
+		td = tv_diff(&tv, &ap->last_tv);
 		
-		if (td > 30000) {// 30s
+		if (td > DNS_SET_INTERVAL) {// 30s
 			print_debug_log ("[debug] set offline for lost heartbeat %lu\n", td);
 			ap->online = OFF;
 			ap->status = AC_INIT_OFFLINE;
@@ -1040,7 +1044,7 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	arr = blobmsg_open_array (buf, "id");
 	for ( i = 0;i<=AP_MAX_BINDID;i++){
 		if (ap->apinfo.id & (0x01<<i)){
-			print_debug_log("%s %d i:%d apinfo:%d\n",__FUNCTION__,__LINE__,i,ap->apinfo.id);
+			//print_debug_log("%s %d i:%d apinfo:%d\n",__FUNCTION__,__LINE__,i,ap->apinfo.id);
 			blobmsg_add_u32 (buf, NULL, i);
 		}
 	}
@@ -1064,24 +1068,24 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	blobmsg_add_string (buf, "channel", ap->apinfo.wifi_info.channel);
 	blobmsg_add_string (buf, "txpower", ap->apinfo.wifi_info.txpower);
 
-	if (ap->stamac != NULL){
-		if (ap->len == 0){
-			return;
+	arr = blobmsg_open_array (buf, "sta");
+	/*show all station info in this AP*/
+	for(i = 0;i < AP_HASH_SIZE;i++){
+		hlist_for_each_entry(station, &(stalist.hash[i]), hlist) {
+			if (ether_addr_equal((const u8 *)station->ap_mac,(const u8 *)ap->apinfo.apmac)){
+				memset(mac_temp,'\0',sizeof(mac_temp));
+				sprintf(mac_temp,"%02x:%02x:%02x:%02x:%02x:%02x",\
+					station->mac[0]&0xff,\
+					station->mac[1]&0xff,\
+					station->mac[2]&0xff,\
+					station->mac[3]&0xff,\
+					station->mac[4]&0xff,\
+					station->mac[5]&0xff);
+				blobmsg_add_string(buf, "", mac_temp);
+			}
 		}
-		
-		mac = alloca(ap->len);
-		memset(mac, 0, ap->len);
-		strcpy(mac, ap->stamac);
-		str = strtok(mac, ",");
-		arr = blobmsg_open_array (buf, "sta");
-		while(str)
-		{
-			blobmsg_add_string(buf, "", str);
-			str = strtok(NULL, ",");
-		}
-		blobmsg_close_array (buf, arr);
 	}
-
+	blobmsg_close_array (buf, arr);
 	
 	return;
 }
@@ -1584,7 +1588,7 @@ static int ubus_proc_templatelist(struct ubus_context *ctx, struct ubus_object *
 	while (tp->rlink){
 		tp = tp->rlink;
 		memcpy(&tmp_array[tp->tmplate_info.id],&(tp->tmplate_info),sizeof(tmp_info));
-		print_debug_log("%s,%d id:%d,tp:%d\n",__FUNCTION__,__LINE__,tmp_array[tp->tmplate_info.id].id,tp->tmplate_info.id);
+		//print_debug_log("%s,%d id:%d,tp:%d\n",__FUNCTION__,__LINE__,tmp_array[tp->tmplate_info.id].id,tp->tmplate_info.id);
 	}
 
 	for(i = 0;i<=MAX_TMP_ID;i++){
@@ -1980,9 +1984,24 @@ int aplist_hash_init(void)
 	return 0;
 }
 
+int stalist_hash_init(void)
+{
+	int i ;
+
+	/*for hash and kmem*/
+	get_random_bytes(&sta_listdb_salt, sizeof(sta_listdb_salt));
+
+    /*init the aplist  hash*/
+    for(i = 0;i < AP_HASH_SIZE;i++){
+		INIT_HLIST_HEAD(&(stalist.hash[i]));
+	}
+
+	return 0;
+}
+
 void aplist_entry_init(ap_status_entry aplist_node)
 {
-	memset(&aplist_node,'\0',sizeof(ap_status_entry));
+	memset(&aplist_node,0,sizeof(ap_status_entry));
 }
 
 void acd_init(void)
@@ -2009,6 +2028,7 @@ void acd_init(void)
 	}
 
 	aplist_hash_init();
+	stalist_hash_init();
 	aplist_entry_init(p_temp_ap_info);
 	tplist_init ();
 	aplist_init ();
@@ -2045,13 +2065,13 @@ int main(int argc, char **argv)
 	  fprintf (stderr, "Failed to connect to ubus\n");
 	  return -1;
 	}
-	
+
 	timeout.cb = set_ac_dns_address;
 	ubus_add_uloop (ctx);
 	acd_init ();
 	run_server ();
 	server_main ();
-	uloop_timeout_set(&timeout, 3000);
+	uloop_timeout_set(&timeout, DNS_SET_INTERVAL);
 	uloop_run ();
 
 	ubus_free (ctx);

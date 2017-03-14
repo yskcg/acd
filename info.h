@@ -198,26 +198,37 @@ typedef struct encode_ud {
 
 typedef struct {
     struct hlist_node	hlist;
+    unsigned char mac[6];               //station mac address;
+    unsigned char ap_mac[6];            //ap device mac address;
+    char ip[16];
+    char name[64];
+    struct timeval 	time_stamp;
+}sta_entry;
+
+typedef struct {
+    struct hlist_node	hlist;
     
-    char 	status;					//用来处理是否走上线流程,0：ac 初始化时，未上线；1：新建hash node；2：上线
-    char 	online;					//标识ap 设备是否在线
+    char 	status;					    //用来处理是否走上线流程,0：ac 初始化时，未上线；1：新建hash node；2：上线
+    char 	online;					    //标识ap 设备是否在线
     
     int		fd;
-    int 	apid;					//用于标示 在aplist 文件中ap_cfg_x 的number
-    int		len;
+    int 	apid;					    //用于标示 在aplist 文件中ap_cfg_x 的number
     
     ap_cmd 			    cmd;
     ecode_ud_spro 		ud;
     ap_sys_info 		apinfo;
     struct timeval 		last_tv;
     struct client 		*client_addr;
-    char			    apname[128];//AP 别名
-    char 			    *stamac;		//该AP 下的用户终端mac 地址
+    char			    apname[128];    //AP 别名
 }ap_status_entry;
 
 typedef struct {
     struct hlist_head		hash[AP_HASH_SIZE];
 }ap_list;
+
+typedef struct {
+    struct hlist_head		hash[AP_HASH_SIZE];
+}sta_list;
 
 typedef struct {
     char 	tpname[64];

@@ -50,12 +50,19 @@ extern void template_del_by_id(tmplat_list *h, char id);
 extern int template_insert_by_id(tmplat_list *t);
 extern tmplat_list *template_entry_init(void);
 
-/*hash API*/
+/*aplist hash API*/
 extern ap_status_entry *aplist_entry_find(struct hlist_head *head, u8_t *addr);
 extern ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8_t *addr);
 extern ap_status_entry *aplist_entry_insert(u8_t *addr);
 extern void * aplist_entry_remove(u8_t *addr);
 extern int aplist_entry_hash(u8_t *addr);
+
+/*stalist hash API*/
+extern void * stalist_entry_remove(u8_t *addr);
+extern sta_entry *stalist_entry_find(struct hlist_head *head, u8_t *addr);
+extern sta_entry *stalist_entry_insert(u8_t *addr);
+extern int stalist_entry_hash(u8_t *addr);
+
 #endif
 
 

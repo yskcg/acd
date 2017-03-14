@@ -13,12 +13,18 @@
 #define AC_DNS_DOMAIN  		"www.morewifi.ac.com"
 #define DEFAULT_DEVICE_IP	"192.168.33.111"
 
+#define ONE_SECOND		1000
+#define DNS_SET_INTERVAL	30*ONE_SECOND
+#define STATION_STATUS_CHECK_INTERVAL 300*ONE_SECOND
+
 #define set_bit(x,y) 		x = x | (0x1<<y)
 #define clear_bit(x,y)		x = x & (~(0x1<<y))
 
-extern tmplat_list *tplist;
-extern ap_list aplist;
-extern u32 ap_listdb_salt;
+extern tmplat_list 	*tplist;
+extern ap_list 		aplist;
+extern sta_list 	stalist;
+extern u32 		ap_listdb_salt;
+extern u32 		sta_listdb_salt;
 
 int is_digit_string(char * string);
 void print_debug_log (const char *form, ...);
@@ -33,6 +39,11 @@ int proc_tmplate_info (tmplat_list * tpcfg, struct ubus_request_data *req);
 int send_data_to_ap (ap_status_entry * ap);
 int rcv_and_proc_data (char *data, int len, struct client *cl);
 int ap_online_proc (ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr);
+void aplist_entry_init(ap_status_entry aplist_node);
+int stalist_hash_init(void);
+int aplist_hash_init(void);
+
+extern void gettime(struct timeval *tv);
 
 #endif
 
