@@ -8,6 +8,7 @@ static struct sproto 		*spro_new = NULL;	//the protocol
 static struct ubus_context  *ctx;
 static struct blob_buf b;
 static struct uloop_timeout timeout;
+static struct uloop_timeout sta_timeout;
 
 static char temp_ssid[TEMP_SSID_BUF_SIZE] = {'\0'};
 static char temp_key[TEMP_SSID_BUF_SIZE]  = {'\0'};
@@ -2067,11 +2068,13 @@ int main(int argc, char **argv)
 	}
 
 	timeout.cb = set_ac_dns_address;
+	sta_timeout.cb = check_station_status;
 	ubus_add_uloop (ctx);
 	acd_init ();
 	run_server ();
 	server_main ();
 	uloop_timeout_set(&timeout, DNS_SET_INTERVAL);
+	uloop_timeout_set(&sta_timeout, STATION_STATUS_CHECK_INTERVAL);
 	uloop_run ();
 
 	ubus_free (ctx);
