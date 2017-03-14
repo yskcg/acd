@@ -357,8 +357,8 @@ void tplist_init(void)
 		return;
 	}
 	
-	/*for old tplist file cut the ap_cfg_xx= header line*/
-	sprintf(buf,"sed -i 's/^ap_cfg_[0-9]*=//g' %s",TP_LIST_FILE);
+	/*for old tplist file cut the template_[0-9]= header line*/
+	sprintf(buf,"sed -i 's/^template_[0-9]*=//g' %s",TP_LIST_FILE);
 	system(buf);
 	fseek(fp, 0, SEEK_END);
 	file_size = ftell(fp);
