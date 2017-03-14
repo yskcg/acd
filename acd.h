@@ -15,7 +15,8 @@
 
 #define ONE_SECOND		1000
 #define DNS_SET_INTERVAL	30*ONE_SECOND
-#define STATION_STATUS_CHECK_INTERVAL 300*ONE_SECOND
+#define HEAR_BEAT_INTEVAL	30*ONE_SECOND
+#define STATION_STATUS_CHECK_INTERVAL 180*ONE_SECOND
 
 #define set_bit(x,y) 		x = x | (0x1<<y)
 #define clear_bit(x,y)		x = x & (~(0x1<<y))

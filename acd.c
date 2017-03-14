@@ -76,15 +76,20 @@ void check_station_status(struct uloop_timeout *t)
 	long td;
 	struct timeval tv;
 	sta_entry *station = NULL;
+	struct hlist_node *tmp;
 
 	for(i = 0;i < AP_HASH_SIZE;i++){
-		hlist_for_each_entry(station, &(stalist.hash[i]), hlist) {
+		if (hlist_empty(&(stalist.hash[i]))){
+			continue;
+		}
+		hlist_for_each_entry_safe(station,tmp,&(stalist.hash[i]), hlist) {
 			gettime(&tv);
 			td = tv_diff(&tv, &station->time_stamp);
 
-			if (td > STATION_STATUS_CHECK_INTERVAL) {	//5 minute
-				print_debug_log ("[debug] remove the station after %lu\n", td);
-				stalist_entry_remove(station->mac);
+			if (td > STATION_STATUS_CHECK_INTERVAL) {	//3 minute
+				/*del the node*/
+				hlist_del(&station->hlist);
+				free(station);
 			}
 		}
 	}
@@ -129,6 +134,9 @@ static void client_close(struct ustream *s)
 	
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
+		if (hlist_empty(&(aplist.hash[i]))){
+			continue;
+		}
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {
 			if ( ap->client_addr && ap->client_addr->s.fd.fd == cl->s.fd.fd){
 				free_mem(ap);
@@ -941,6 +949,9 @@ int proc_template_edit(tmplat_list *tpcfg, struct ubus_request_data *req)
 	
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
+		if (hlist_empty(&(aplist.hash[i]))){
+			continue;
+		}
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
 			if (((0x01 << tpcfg->tmplate_info.id) & ap->apinfo.id)){
 				memset(&(ap->apinfo.wifi_info.ssid_info[tpcfg->tmplate_info.id]),'\0',sizeof(ap_ssid_info));
@@ -1033,7 +1044,7 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 		gettime(&tv);
 		td = tv_diff(&tv, &ap->last_tv);
 		
-		if (td > DNS_SET_INTERVAL) {// 30s
+		if (td > (HEAR_BEAT_INTEVAL)) {// 30s
 			print_debug_log ("[debug] set offline for lost heartbeat %lu\n", td);
 			ap->online = OFF;
 			ap->status = AC_INIT_OFFLINE;
@@ -1072,6 +1083,9 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	arr = blobmsg_open_array (buf, "sta");
 	/*show all station info in this AP*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
+		if (hlist_empty(&(stalist.hash[i]))){
+			continue;
+		}
 		hlist_for_each_entry(station, &(stalist.hash[i]), hlist) {
 			if (ether_addr_equal((const u8 *)station->ap_mac,(const u8 *)ap->apinfo.apmac)){
 				memset(mac_temp,'\0',sizeof(mac_temp));
@@ -1135,6 +1149,9 @@ static int ubus_proc_apinfo(struct ubus_context *ctx, struct ubus_object *obj,
 	arr = blobmsg_open_array (&b, "data");
 	
 	for(i = 0;i < AP_HASH_SIZE;i++){
+		if (hlist_empty(&(aplist.hash[i]))){
+			continue;
+		}
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {
 			if (ap != NULL){
 				table = blobmsg_open_table (&b, NULL);
@@ -1479,6 +1496,9 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
+		if (hlist_empty(&(aplist.hash[i]))){
+			continue;
+		}
 		hlist_for_each_entry(ap, &(aplist.hash[i]), hlist) {	
 			if (((0x01 << tp->tmplate_info.id) & ap->apinfo.id)){
 				print_debug_log("%s %d tpid:%d apid:%d\n",__FUNCTION__,__LINE__,tp->tmplate_info.id,ap->apinfo.id);
