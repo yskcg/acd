@@ -6,14 +6,15 @@
 #include "sproto.h"
 #include "rw.h"
 #include "info.h"
+#include "station.h"
 
 #define AP_LIST_FILE        	"/etc/aplist"
-#define TP_LIST_FILE		"/etc/tplist"
-#define APC_SP_FILE		"/usr/share/apc.sp"
-#define AC_DNS_DOMAIN  		"www.morewifi.ac.com"
-#define DEFAULT_DEVICE_IP	"192.168.33.111"
+#define TP_LIST_FILE			"/etc/tplist"
+#define APC_SP_FILE				"/usr/share/apc.sp"
+#define AC_DNS_DOMAIN  			"www.morewifi.ac.com"
+#define DEFAULT_DEVICE_IP		"192.168.33.111"
 
-#define ONE_SECOND		1000
+#define ONE_SECOND			1000
 #define DNS_SET_INTERVAL	30*ONE_SECOND
 #define HEAR_BEAT_INTEVAL	30*ONE_SECOND
 #define STATION_STATUS_CHECK_INTERVAL 180*ONE_SECOND
@@ -41,6 +42,7 @@ int send_data_to_ap (ap_status_entry * ap);
 int rcv_and_proc_data (char *data, int len, struct client *cl);
 int ap_online_proc (ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr);
 void aplist_entry_init(ap_status_entry aplist_node);
+void stalist_entry_init(sta_entry stalist_node);
 int stalist_hash_init(void);
 int aplist_hash_init(void);
 

@@ -39,6 +39,7 @@
 #define AP_STATUS		    1
 #define AP_INFO			    2
 #define AP_CMD			    3
+#define STA_INFO			4
 #define RESPONSE_ERROR		0
 #define RESPONSE_PACK	  	0
 #define RESPONSE_OK		    1
@@ -63,6 +64,10 @@
 #define IS_DIGIT_STRING     0
 #define IS_DIGIT_STRING_ERR 1     
 
+#define WIFI_SIGNAL_TYPE_2_4 	0
+#define WIFI_SIGNAL_TYPE_5G		1
+#define WIFI_SIGNAL_ENABLE		1
+#define WIFI_SIGNAL_DISABLE		0
 
 #ifndef container_of
 #define container_of(ptr, type, member)                                 \
@@ -97,6 +102,10 @@ enum {
     LMAC,
     IPADDR,
     EDIT_FLAG,
+	HIDDEN,
+	DISABLED,
+	TYPE,
+	AUTH,
     MODEL,
     __CFG_MAX
 };
@@ -163,6 +172,10 @@ typedef struct {
     char ssid[33];					//AP 对应的ssid
     char key[33];					//AP 对应无线密码
     char encrypt[33];				//AP 对应的无线加密方式
+	char hidden;					//hidden wireless signal;0:disable;1:enable
+	char disabled;					//disable the wireless signal;0:disable;1:enable
+	char type;						//wireless type 0:2.4G;1:5G
+	char auth;						//enable auth;0:disable;1:enable
 }ap_ssid_info;
 
 typedef struct  {
@@ -198,11 +211,16 @@ typedef struct encode_ud {
 
 typedef struct {
     struct hlist_node	hlist;
-    unsigned char mac[6];               //station mac address;
-    unsigned char ap_mac[6];            //ap device mac address;
-    char ip[16];
-    char name[64];
-    struct timeval 	time_stamp;
+    unsigned char 		mac[6];               //station mac address;
+    unsigned char 		ap_mac[6];            //ap device mac address;
+	unsigned char 		bssid[6];			  //bssid of station wifi connect
+	unsigned char 		status;				  //1:on;0:off
+	unsigned char 		type;				  //1:5G;0:2.4G
+	unsigned char 		ssid[64];
+    char 				ip[16];
+    char 				name[64];
+	ecode_ud_spro 		ud;
+    struct timeval 		time_stamp;
 }sta_entry;
 
 typedef struct {

@@ -11,12 +11,15 @@ rw.o:rw.c rw.h jhash.h list.h etherdevice.h random.h info.h acd.h
 	
 sproto.o:sproto.c sproto.h msvcint.h
 	@$(CC) -Wall -g -c sproto.c sproto.h msvcint.h
-	
+
+station.o:station.c station.h 
+	@$(CC) -Wall -g -c station.c station.h
+
 acd.o:acd.c acd.h  
 	@$(CC) -Wall -g -c acd.c acd.h 
 	
-acd:acd.o sproto.o rw.o random.o
-	@$(CC) -Wall -g -o acd acd.o random.o sproto.o rw.o $(LDFLAGS)
+acd:acd.o sproto.o rw.o random.o station.o
+	@$(CC) -Wall -g -o acd acd.o random.o station.o sproto.o rw.o $(LDFLAGS)
 #	@lua apc.lua
 
 	

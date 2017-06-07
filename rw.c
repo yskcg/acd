@@ -264,19 +264,20 @@ ap_status_entry *aplist_entry_insert(u8_t *addr)
 {	
 	struct hlist_head *head = NULL;
 	ap_status_entry *aplist_node = NULL;
-	
+
 	if (!is_valid_ether_addr((const u8 *)addr)){
 		return NULL;
 	}
-	
+
 	if (is_local_ether_addr((const u8 *)addr)){
 		return NULL;
 	}
-	
+
 	head = &aplist.hash[aplist_entry_hash(addr)];
 	aplist_node = aplist_entry_find(head,addr);
-	
+
 	if(!aplist_node) {
+
 		aplist_node = aplist_entry_creat(head,addr);
 		if(!aplist_node){
 			return NULL;
@@ -284,9 +285,10 @@ ap_status_entry *aplist_entry_insert(u8_t *addr)
 	}else{
 		if (aplist_node->status != AC_AP_HASH_NODE_ON){
 			aplist_node->status = AC_INIT_OFFLINE;
+
 		}
 	}
-	
+
 	return aplist_node;
 }
 
@@ -306,8 +308,8 @@ int stalist_entry_hash(u8_t *addr)
 
 sta_entry *stalist_entry_creat(struct hlist_head *head,const u8_t *addr)
 {
+
 	sta_entry *stalist_node = NULL;
-	struct timeval node_tv;
 
 	if (!is_valid_ether_addr((const u8 *)addr)){
 		return NULL;
@@ -403,3 +405,4 @@ sta_entry *stalist_entry_insert(u8_t *addr)
 
 	return stalist_node;
 }
+

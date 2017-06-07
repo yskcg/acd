@@ -12,13 +12,18 @@ static struct uloop_timeout sta_timeout;
 
 static char temp_ssid[TEMP_SSID_BUF_SIZE] = {'\0'};
 static char temp_key[TEMP_SSID_BUF_SIZE]  = {'\0'};
-static char temp_encrypt[TEMP_SSID_BUF_SIZE] = {'\0'};
+static char temp_encrypt[TEMP_SSID_BUF_SIZE]  = {'\0'};
+static char temp_hidden[TEMP_SSID_BUF_SIZE] = {'\0'};
+static char temp_disabled[TEMP_SSID_BUF_SIZE] = {'\0'};
+static char temp_type[TEMP_SSID_BUF_SIZE] = {'\0'};
+
 u32 ap_listdb_salt;
 u32 sta_listdb_salt;
 ap_list 	aplist;							//ap information list
 sta_list 	stalist;						//station information list
 tmplat_list *tplist 	= NULL;
 static ap_status_entry p_temp_ap_info;
+static sta_entry p_temp_sta_info;
 
 void gettime(struct timeval *tv)
 {
@@ -38,15 +43,49 @@ static int tv_diff(struct timeval *t1, struct timeval *t2)
 
 }
 
+char char_to_data(const char ch)
+{
+    switch(ch){
+		case '0': return 0;
+		case '1': return 1;
+		case '2': return 2;
+		case '3': return 3;
+		case '4': return 4;
+		case '5': return 5;
+		case '6': return 6;
+		case '7': return 7;
+		case '8': return 8;
+		case '9': return 9;
+		case 'a':
+		case 'A': return 10;
+		case 'b':
+		case 'B': return 11;
+		case 'c':
+		case 'C': return 12;
+		case 'd':
+		case 'D': return 13;
+		case 'e':
+		case 'E': return 14;
+		case 'f':
+		case 'F': return 15;
+    }
+    return 0;
+}
+
 static void mac_string_to_value(unsigned char *mac,unsigned char *buf)
 {
     int i;
     int len;
+	unsigned char * p_temp = mac;
 
 	if(mac && buf){
 		len = strlen((const char *)mac);
 		for (i=0;i<(len-5)/2;i++){
-			sscanf((const char *)mac+i*3,"%2x",&buf[i]);
+			//mach_len = sscanf((const char *)mac+i*3,"%2x",&buf[i]);
+
+			buf[i] = char_to_data(*p_temp++) * 16;
+			buf[i] += char_to_data(*p_temp++);
+			p_temp++;
 		}
 	}
 }
@@ -68,6 +107,15 @@ void set_ac_dns_address(struct uloop_timeout *t)
 	uloop_timeout_set(t, DNS_SET_INTERVAL);
 
 	return;
+}
+
+int data_range_in(int data,int little,int bigger)
+{
+	if (data >= little && data <= bigger){
+		return 1;
+	}else{
+		return 0;
+	}
 }
 
 void check_station_status(struct uloop_timeout *t)
@@ -358,14 +406,17 @@ void tplist_init(void)
 	}
 	
 	/*for old tplist file cut the template_[0-9]= header line*/
-	sprintf(buf,"sed -i 's/^template_[0-9]*=//g' %s",TP_LIST_FILE);
+	/*for old tplist file support for auth disable type hidden attr*/
+	memset(buf,'\0',sizeof(512));
+	sprintf(buf," . /usr/sbin/tplist.sh %s" ,TP_LIST_FILE);
 	system(buf);
+
 	fseek(fp, 0, SEEK_END);
 	file_size = ftell(fp);
 	memset(buf,'\0',sizeof(512));
 	if (file_size == 0){
 		/*no contents - write the default value for default template*/
-		strcpy(buf, "name=default|id=0|ssid=MoreWiFi|encrypt=none|key=");
+		strcpy(buf, "name=default|id=0|ssid=MoreWiFi|encrypt=none|key=|auth=0|type=0|disabled=0|hidden=0");
 		file_write(TP_LIST_FILE, "id=0", buf);
 	}
 
@@ -378,14 +429,14 @@ void tplist_init(void)
 		}else{
 			p_buf = buf;
 			p_key_value = strtok(p_buf,"|");
-
+			memset (&tp, '\0', sizeof (tmplat_list));
 			while(p_key_value){
 				memset(key,'\0',sizeof(key));
 				memset(value ,'\0',sizeof(value));
 				optstr = strstr (p_key_value, "=");
 				strncpy (key, p_key_value, optstr - p_key_value);
 				strncpy (value, optstr + 1,strlen(optstr)-1);
-
+				print_debug_log("%s %d key:%s value:%s\n",__FUNCTION__,__LINE__,key,value);
 				/*fill data in the double link list node*/
 				if (strcasecmp(key, "name") == 0){
 					strcpy(tp.tmplate_info.tpname,value);
@@ -398,13 +449,24 @@ void tplist_init(void)
 				}else if (strcasecmp (key, "key") == 0){
 					strcpy(tp.tmplate_info.tmplat_ssid_info.key,value);
 					tp.tmplate_info.tmplat_ssid_info.key[strlen(value)-1] = '\0';
+				}else if (strcasecmp (key, "auth") == 0){
+					print_debug_log("auth:%s %d",value,atoi(value));
+					tp.tmplate_info.tmplat_ssid_info.auth = (char )atoi(value);
+				}else if (strcasecmp (key, "type") == 0){
+					print_debug_log("type:%s %d\n",value,atoi(value));
+					tp.tmplate_info.tmplat_ssid_info.type = (char )atoi(value);
+				}else if (strcasecmp (key, "disabled") == 0){
+					print_debug_log("disabled:%s %d\n",value,atoi(value));
+					tp.tmplate_info.tmplat_ssid_info.disabled = (char )atoi(value);
+				}else if (strcasecmp (key, "hidden") == 0){
+					print_debug_log("hidden:%s %d\n",value,atoi(value));
+					tp.tmplate_info.tmplat_ssid_info.hidden = (char )atoi(value);
 				}
 
 				p_key_value = strtok (NULL, "|");
 			}
 
 			template_insert_by_id (&tp);
-
 			memset (&tp, '\0', sizeof (tmplat_list));
 		}
 		memset(buf,'\0',sizeof(512));
@@ -558,10 +620,17 @@ void fill_encode_data(ap_status_entry *apcfg, char *tagname, char *value)
 	if (apcfg == NULL){
 		return;
 	}
+
 	if (strcasecmp (tagname, "ssid") == 0){
 		strcpy (value, (const char *)temp_ssid);
 	}else if (strcasecmp (tagname, "encrypt") == 0){
 		strcpy (value, (const char *)temp_encrypt);
+	}else if (strcasecmp (tagname, "hidden") == 0){
+		strcpy (value, (const char *)temp_hidden);
+	}else if (strcasecmp (tagname, "type") == 0){
+		strcpy (value, (const char *)temp_type);
+	}else if (strcasecmp (tagname, "disabled") == 0){
+		strcpy (value, (const char *)temp_disabled);
 	}else if (strcasecmp (tagname, "key") == 0){
 		strcpy (value, (const char *)temp_key);
 	}else if (strcasecmp (tagname, "channel") == 0){
@@ -631,14 +700,47 @@ void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 	return;
 }
 
+int fill_data_sta_info(sta_entry *sta_info,char *tagname, char *value, int len)
+{
+	unsigned char mac_value[ETH_ALEN] = {0};
+	sta_entry *station = sta_info;
+
+	if (sta_info == NULL || strlen (value) == 0 || len == 0){
+		return -1;
+	}
+
+	if (strcasecmp (tagname, "sta_mac") == 0){
+		mac_string_to_value((unsigned char *)value,mac_value);
+		memcpy(station->mac, mac_value, ETH_ALEN);
+	}else if (strcasecmp (tagname, "sta_bssid") == 0){
+		mac_string_to_value((unsigned char *)value,mac_value);
+		memcpy(station->bssid, mac_value, ETH_ALEN);
+	}else if (strcasecmp (tagname, "sta_ssid") == 0){
+		memset(station->ssid,'\0',sizeof(station->ssid));
+		strncpy ((char *)station->ssid, value, len);
+	}else if (strcasecmp (tagname, "sta_ap_mac") == 0){
+		mac_string_to_value((unsigned char *)value,mac_value);
+		memcpy(station->ap_mac, mac_value, ETH_ALEN);
+	}
+
+	return 0;
+}
+
 int sproto_parser_cb(void *ud, const char *tagname, int type, int index, struct sproto_type *st, void *value, int length)
 {
-	struct encode_ud *self = ud;
-	ap_status_entry *apcfg = container_of (ud, ap_status_entry, ud);
-	char val[256] = {0};
 	int r;
+	char val[256] = {0};
+	struct encode_ud *self = ud;
+	ap_status_entry *apcfg = NULL;
+	sta_entry  *sta_status_info = NULL;
 	
-	if (!(tagname && ud && apcfg)){
+	if(self->type == STA_INFO ){
+		sta_status_info = container_of (ud, sta_entry, ud);
+	}else{
+		apcfg = container_of (ud, ap_status_entry, ud);
+	}
+
+	if (!(tagname && ud && (apcfg || sta_status_info))){
 		return 0;
 	}
 	
@@ -650,10 +752,14 @@ int sproto_parser_cb(void *ud, const char *tagname, int type, int index, struct 
 				self->session = *(int *) value;
 			}else if (strcasecmp (tagname, "apstatus") == 0){
 				apcfg->cmd.status = *(int *) value;
+			}else if (strcasecmp(tagname, "sta_status") == 0){
+				sta_status_info->status = *(int *) value;
+			}else if (strcasecmp(tagname, "sta_type") == 0){
+				sta_status_info->type = *(int *) value;
 			}
-
+			print_debug_log ("[debug] [decode] [%s:] [%d]\n", tagname, *(int *) value);
 			break;
-		
+
 		case SPROTO_TBOOLEAN:
 			self->ok = *(int *) value;
 			print_debug_log ("[debug] [decode] [%s:] [%d]\n", tagname, *(int *) value);
@@ -661,8 +767,13 @@ int sproto_parser_cb(void *ud, const char *tagname, int type, int index, struct 
 		
 		case SPROTO_TSTRING:
 			strncpy(val, value, length);
-			fill_data (apcfg, (char *) tagname, val, length);
 			print_debug_log("[debug] [decode] [%s: %s,%d]\n", tagname, val, length);
+			if (self->type == STA_INFO){
+				fill_data_sta_info(sta_status_info,(char *) tagname,val,length);
+			}else{
+				fill_data (apcfg, (char *) tagname, val, length);
+			}
+
 			break;
 		
 		case SPROTO_TSTRUCT:
@@ -689,16 +800,17 @@ int sproto_header_parser(char *pack, int size, struct encode_ud *ud, char *unpac
 		print_debug_log ("[debug] [error] [sproto_unpack() failed!]\n");
 		return 0;
 	}
-	
+
 	if ((stype = sproto_type(spro_new, "package")) == NULL){
 		print_debug_log ("[debug] [error] [sproto_type() failed!]\n");
 		return 0;
 	}
-	
+
 	if ((header_len = sproto_decode(stype, unpack, unpack_len, sproto_parser_cb, ud)) <= 0){
 		print_debug_log ("[debug] [error] [sproto_decode() failed!]\n");
 		return 0;
 	}
+
 	return header_len;
 }
 
@@ -706,16 +818,17 @@ int sproto_parser(char *data, int headlen, struct encode_ud *ud)
 {
 	struct sproto_type *stype;
 	int len;
-	
+
 	if ((stype = sproto_protoquery(spro_new, ud->type, ud->session)) == NULL){
 		print_debug_log ("[debug] [error] [sproto_protoquery() failed!]\n");
 		return 0;
 	}
-	
+
 	if ((len = sproto_decode(stype, data + headlen, BUFLEN, sproto_parser_cb, ud)) <= 0){
 		print_debug_log ("[debug] [error] [sproto_decode() failed!]\n");
 		return 0;
 	}
+
 	return len;
 }
 
@@ -803,92 +916,108 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 	int slen;
 	int headlen;
 	int status = 0;
+	ecode_ud_spro 	ud;
 	char unpack[1024 * 6] = { 0 };
+	sta_entry *stal= NULL;
 	ap_status_entry *apl = NULL, *ap = NULL;
 	
 	print_debug_log ("[debug] [rcv] [data len:%d, fd:%d]\n", len, cl->s.fd.fd);
 	
+	//for ap
 	aplist_entry_init(p_temp_ap_info);
 	apl = &p_temp_ap_info;
 	apl->client_addr = cl;
 	apl->online = ON;
 	
+	//for station
+	stalist_entry_init(p_temp_sta_info);
+	stal = &p_temp_sta_info;
+
 	/*sproto header parse：type and session*/
-	if ((headlen = sproto_header_parser(data, len, &(apl->ud), unpack)) <= 0){
+	if ((headlen = sproto_header_parser(data, len, &ud, unpack)) <= 0){
 		print_debug_log ("[debug] [error] [sproto header parser failed!!]\n");
 		return -1;
 	}
+
+	print_debug_log("%s %d type:%d session:%d\n",__FUNCTION__,__LINE__,ud.type,ud.session);
+	if(ud.type == STA_INFO){
+		memcpy(&stal->ud,&ud,sizeof(ud));
+		print_debug_log("%s %d type:%d session:%d\n",__FUNCTION__,__LINE__,stal->ud.type,stal->ud.session);
+		/*sproto encoded data parse*/
+		if (sproto_parser (unpack, headlen, &(stal->ud)) <= 0){
+			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
+		}
 	
-	/*sproto encoded data parse*/
-	if (sproto_parser (unpack, headlen, &apl->ud) <= 0){
-		print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
-		goto error;
-	}
+		stalist_entry_update(stal);
 	
-	/*after decode the sproto data ,we creat/update hash list*/
-	if ( apl->apinfo.apmac != NULL ){
-		/*for_each to find hash node*/
-		ap = aplist_entry_insert(apl->apinfo.apmac);
+	}else{
+		memcpy(&apl->ud,&ud,sizeof(ud));
+		if (sproto_parser (unpack, headlen, &(apl->ud)) <= 0){
+			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
+			goto error;
+		}
 		
-		if ( ap ){
-			ap->online = apl->online;
-			if (ap->status == AC_NEW_HASH_NODE || ap->status == AC_INIT_OFFLINE){
-				status = AC_NEW_HASH_NODE;
-				ap->client_addr = cl;
+		/*after decode the sproto data ,we creat/update hash list*/
+		if ( apl->apinfo.apmac != NULL ){
+			/*for_each to find hash node*/
+			ap = aplist_entry_insert(apl->apinfo.apmac);
+
+			if ( ap ){
+				ap->online = apl->online;
+				if (ap->status == AC_NEW_HASH_NODE || ap->status == AC_INIT_OFFLINE){
+					status = AC_NEW_HASH_NODE;
+					ap->client_addr = cl;
+				}
+				gettime(&ap->last_tv);
+				memcpy(&(ap->ud),&(apl->ud),sizeof(ecode_ud_spro));
+				/*update the ap info :hver,sver,sn,aip,model,stamac*/
+				strcpy(ap->apinfo.hver,apl->apinfo.hver);
+				strcpy(ap->apinfo.sver,apl->apinfo.sver);
+				strcpy(ap->apinfo.sn,apl->apinfo.sn);
+				strcpy(ap->apinfo.aip,apl->apinfo.aip);
+				strcpy(ap->apinfo.model,apl->apinfo.model);
+			}else{
+				return -2;
 			}
-			
-			gettime(&ap->last_tv);
-			memcpy(&(ap->ud),&(apl->ud),sizeof(ecode_ud_spro));
-			/*update the ap info :hver,sver,sn,aip,model,stamac*/
-			strcpy(ap->apinfo.hver,apl->apinfo.hver);
-			strcpy(ap->apinfo.sver,apl->apinfo.sver);
-			strcpy(ap->apinfo.sn,apl->apinfo.sn);
-			strcpy(ap->apinfo.aip,apl->apinfo.aip);
-			strcpy(ap->apinfo.model,apl->apinfo.model);
-		}else{
-			return -2;
 		}
-	}
-	
-	if (ap->ud.session == SPROTO_RESPONSE && ap->ud.ok == RESPONSE_OK){
-		ap->ud.ok = 0;
-		if (ap->ud.type == AP_CMD){
-			free_mem(ap);
-			return ACd_STATUS_REBOOT_OK;
+
+		if (ap->ud.session == SPROTO_RESPONSE && ap->ud.ok == RESPONSE_OK){
+			ap->ud.ok = 0;
+			if (ap->ud.type == AP_CMD){
+				free_mem(ap);
+				return ACd_STATUS_REBOOT_OK;
+			}
+			print_debug_log ("[debug] <receive> [response pack]\n");
+
+			return ACd_STATUS_OK;
+		}else if (ap->ud.session == SPROTO_RESPONSE && ap->ud.ok == RESPONSE_ERROR){
+			ap->ud.session = SPROTO_REQUEST;
+			slen = send_data_to_ap (ap);
+
+			return ACd_STATUS_OK;
+		}else if (status ==AC_NEW_HASH_NODE  && ap->ud.session == SPROTO_REQUEST){
+			return ap_online_proc (ap, cl->s.fd.fd, &cl->localaddr);
 		}
-		print_debug_log ("[debug] <receive> [response pack]\n");
 		
-		return ACd_STATUS_OK;
-	}else if (ap->ud.session == SPROTO_RESPONSE && ap->ud.ok == RESPONSE_ERROR){
-		ap->ud.session = SPROTO_REQUEST;
+		ap->ud.session = SPROTO_RESPONSE;
+		ap->ud.ok = RESPONSE_OK;
 		slen = send_data_to_ap (ap);
 		
 		return ACd_STATUS_OK;
-	}else if (status ==AC_NEW_HASH_NODE  && ap->ud.session == SPROTO_REQUEST){
-		return ap_online_proc (ap, cl->s.fd.fd, &cl->localaddr);
-	}
-	
-	ap->ud.session = SPROTO_RESPONSE;
-	ap->ud.ok = RESPONSE_OK;
-	slen = send_data_to_ap (ap);
-	
-	return ACd_STATUS_OK;
 
 error:
-	ap->ud.session = SPROTO_RESPONSE;
-	ap->ud.ok = RESPONSE_ERROR;
-	slen = send_data_to_ap (ap);
-	print_debug_log ("[debug] <send> [data len:%d]\n", slen);
-	
-	return -1;
+		ap->ud.session = SPROTO_RESPONSE;
+		ap->ud.ok = RESPONSE_ERROR;
+		slen = send_data_to_ap (ap);
+		print_debug_log ("[debug] <send> [data len:%d]\n", slen);
+
+		return -1;
+	}
 }
 
-int send_data_to_ap (ap_status_entry * ap)
+int prepare_tmplist_data(ap_status_entry * ap)
 {
-	int psize;
-	int len;
 	int i;
-	char res[BUFLEN] = { 0 };
 
 	if (ap == NULL){
 		return -1;
@@ -899,19 +1028,43 @@ int send_data_to_ap (ap_status_entry * ap)
 		memset(temp_ssid,'\0',sizeof(temp_ssid));
 		memset(temp_encrypt,'\0',sizeof(temp_encrypt));
 		memset(temp_key,'\0',sizeof(temp_key));
+		memset(temp_disabled,'\0',sizeof(temp_disabled));
+		memset(temp_hidden,'\0',sizeof(temp_hidden));
+		memset(temp_type,'\0',sizeof(temp_type));
 
 		for (i = 0; i<=MAX_TMP_ID; i++){
 			if(ap->apinfo.id & (0x01<<i)){
 				sprintf(temp_ssid+strlen((const char *)temp_ssid),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].ssid[0]));
 				sprintf(temp_encrypt+strlen((const char *)temp_encrypt),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].encrypt[0]));
 				sprintf(temp_key+strlen((const char *)temp_key),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].key[0]));
+				sprintf(temp_disabled+strlen((const char *)temp_disabled),"%d,",ap->apinfo.wifi_info.ssid_info[i].disabled);
+				sprintf(temp_hidden+strlen((const char *)temp_hidden),"%d,",ap->apinfo.wifi_info.ssid_info[i].hidden);
+				sprintf(temp_type+strlen((const char *)temp_type),"%d,",ap->apinfo.wifi_info.ssid_info[i].type);
 			}
 		}
 
 		temp_ssid[strlen((const char *)temp_ssid)-1] = '\0';
 		temp_encrypt[strlen((const char *)temp_encrypt)-1] = '\0';
 		temp_key[strlen((const char *)temp_key)-1] = '\0';
+		temp_disabled[strlen((const char *)temp_disabled)-1] = '\0';
+		temp_hidden[strlen((const char *)temp_hidden)-1] = '\0';
+		temp_type[strlen((const char *)temp_type)-1] = '\0';
 	}
+
+	return 0;
+}
+
+int send_data_to_ap (ap_status_entry * ap)
+{
+	int psize;
+	int len;
+	char res[BUFLEN] = { 0 };
+
+	if (ap == NULL){
+		return -1;
+	}
+
+	prepare_tmplist_data(ap);
 
 	psize = sproto_encode_data (&ap->ud, res);
 	if (ap->fd <= 0){
@@ -982,6 +1135,10 @@ void format_tmp_cfg(tmplat_list *tpcfg, char *res)
 	sprintf (buf + strlen (buf), "|ssid=%s", tpcfg->tmplate_info.tmplat_ssid_info.ssid);
 	sprintf (buf + strlen (buf), "|encrypt=%s", tpcfg->tmplate_info.tmplat_ssid_info.encrypt);
 	sprintf (buf + strlen (buf), "|key=%s", tpcfg->tmplate_info.tmplat_ssid_info.key);
+	sprintf (buf + strlen (buf), "|auth=%d",tpcfg->tmplate_info.tmplat_ssid_info.auth);
+	sprintf (buf + strlen (buf), "|type=%d",tpcfg->tmplate_info.tmplat_ssid_info.type);
+	sprintf (buf + strlen (buf), "|disabled=%d",tpcfg->tmplate_info.tmplat_ssid_info.disabled);
+	sprintf (buf + strlen (buf), "|hidden=%d",tpcfg->tmplate_info.tmplat_ssid_info.hidden);
 	strcpy (res, buf);
 	res[strlen (buf)] = 0;
 	
@@ -1022,6 +1179,10 @@ static void template_to_blob(struct blob_buf *buf, tmplat_list *t)
 	blobmsg_add_string (buf, "ssid", t->tmplate_info.tmplat_ssid_info.ssid);
 	blobmsg_add_string (buf, "encrypt",  t->tmplate_info.tmplat_ssid_info.encrypt);
 	blobmsg_add_string (buf, "key",  t->tmplate_info.tmplat_ssid_info.key);
+	blobmsg_add_u32 (buf, "auth", t->tmplate_info.tmplat_ssid_info.auth);
+	blobmsg_add_u32 (buf, "type", t->tmplate_info.tmplat_ssid_info.type);
+	blobmsg_add_u32 (buf, "disabled", t->tmplate_info.tmplat_ssid_info.disabled);
+	blobmsg_add_u32 (buf, "hidden", t->tmplate_info.tmplat_ssid_info.hidden);
 	return;
 }
 
@@ -1355,6 +1516,10 @@ static int ubus_proc_apedit(struct ubus_context *ctx, struct ubus_object *obj,
 int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 {
 	int  id = -1;
+	int  hidden = 0;				//default 0,wifi show
+	int  disabled = 0;				//default 0,wifi on
+	int  type = 0;					//default 0,2.4G
+	int  auth = 0;					//default 0,no auth
 	char edit_temp0_flag = false;
 	char index[64] = {0};
 	char res[1024] = {0};
@@ -1390,6 +1555,22 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		edit_temp0_flag = blobmsg_get_bool(tb[EDIT_FLAG]);
 	}
 
+	if (tb[HIDDEN]){
+		hidden = blobmsg_get_u32 (tb[HIDDEN]);
+	}
+
+	if (tb[DISABLED]){
+		disabled = blobmsg_get_u32 (tb[DISABLED]);
+	}
+
+	if (tb[TYPE]){
+		type = blobmsg_get_u32 (tb[TYPE]);
+	}
+
+	if (tb[AUTH]){
+		auth = blobmsg_get_u32 (tb[AUTH]);
+	}
+
 	if (id < 0){
 		blobmsg_add_string (&b, "msg", "Need template id!");
 		goto error;
@@ -1409,6 +1590,35 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		strcpy (tp->tmplate_info.tpname, tpname);
 	}
 	
+	if (data_range_in(hidden,0,1) == 0){
+
+		blobmsg_add_string (&b, "msg", "hidden value(0 or 1) invalid");
+		goto error;
+	}else{
+		tp->tmplate_info.tmplat_ssid_info.hidden = hidden;
+	}
+
+	if (data_range_in(disabled,0,1) == 0){
+		blobmsg_add_string (&b, "msg", "disabled value(0 or 1) invalid");
+		goto error;
+	}else{
+		tp->tmplate_info.tmplat_ssid_info.disabled = disabled;
+	}
+
+	if (data_range_in(type,0,1) == 0){
+		blobmsg_add_string (&b, "msg", "type value(0 or 1) invalid");
+		goto error;
+	}else{
+		tp->tmplate_info.tmplat_ssid_info.type = type;
+	}
+
+	if (data_range_in(auth,0,1) == 0){
+		blobmsg_add_string (&b, "msg", "auth value(0 or 1) invalid");
+		goto error;
+	}else{
+		tp->tmplate_info.tmplat_ssid_info.auth = auth;
+	}
+
 	if (encrypt != NULL && encrypt[0] != 0){
 		if (strcasecmp(encrypt, "none") != 0){
 			if (strcasecmp(encrypt,"psk") == 0 ){
@@ -1451,10 +1661,14 @@ error:
 
 static const struct blobmsg_policy templatedit_policy[__CFG_MAX] = {
 	[TMPLATID] = {.name = "id",.type = BLOBMSG_TYPE_INT32},
+	[NAME] = {.name = "name",.type = BLOBMSG_TYPE_STRING},
 	[SSID] = {.name = "ssid",.type = BLOBMSG_TYPE_STRING},
 	[ENCRYPT] = {.name = "encrypt",.type = BLOBMSG_TYPE_STRING},
 	[KEY] = {.name = "key",.type = BLOBMSG_TYPE_STRING},
-	[NAME] = {.name = "name",.type = BLOBMSG_TYPE_STRING},
+	[HIDDEN] = {.name = "hidden",.type = BLOBMSG_TYPE_INT32},
+	[DISABLED] = {.name = "disabled",.type = BLOBMSG_TYPE_INT32},
+	[TYPE] = {.name = "type",.type = BLOBMSG_TYPE_INT32},
+	[AUTH] = {.name = "auth",.type = BLOBMSG_TYPE_INT32},
 	[EDIT_FLAG] = {.name = "edit_flag",.type = BLOBMSG_TYPE_BOOL },
 };
 
@@ -1616,12 +1830,17 @@ static int ubus_proc_templatelist(struct ubus_context *ctx, struct ubus_object *
 		if(tmp_array[i].id != i){
 			continue;
 		}
-		table = blobmsg_open_table (&b, &tmp_array[i].id);
+		table = blobmsg_open_table (&b, (const char *)&tmp_array[i].id);
+		//template_to_blob (&b, &(tmp_array[i]));
 		blobmsg_add_string (&b, "name", tmp_array[i].tpname);
 		blobmsg_add_u32 (&b, "id", tmp_array[i].id);
 		blobmsg_add_string (&b, "ssid", tmp_array[i].tmplat_ssid_info.ssid);
 		blobmsg_add_string (&b, "encrypt",  tmp_array[i].tmplat_ssid_info.encrypt);
 		blobmsg_add_string (&b, "key",  tmp_array[i].tmplat_ssid_info.key);
+		blobmsg_add_u32 (&b, "auth", tmp_array[i].tmplat_ssid_info.auth);
+		blobmsg_add_u32 (&b, "type", tmp_array[i].tmplat_ssid_info.type);
+		blobmsg_add_u32 (&b, "disabled", tmp_array[i].tmplat_ssid_info.disabled);
+		blobmsg_add_u32 (&b, "hidden", tmp_array[i].tmplat_ssid_info.hidden);
 		blobmsg_close_table (&b, table);
 	}
 
@@ -1635,6 +1854,10 @@ static const struct blobmsg_policy templateadd_policy[__CFG_MAX] = {
 	[ENCRYPT] = {.name = "encrypt",.type = BLOBMSG_TYPE_STRING},
 	[KEY] = {.name = "key",.type = BLOBMSG_TYPE_STRING},
 	[NAME] = {.name = "name",.type = BLOBMSG_TYPE_STRING},
+	[HIDDEN] = {.name = "hidden",.type = BLOBMSG_TYPE_INT32},
+	[DISABLED] = {.name = "disabled",.type = BLOBMSG_TYPE_INT32},
+	[TYPE] = {.name = "type",.type = BLOBMSG_TYPE_INT32},
+	[AUTH] = {.name = "auth",.type = BLOBMSG_TYPE_INT32},
 };
 
 static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *obj,
@@ -1642,6 +1865,10 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 		       struct blob_attr *msg)
 {
 	struct blob_attr *tb[__CFG_MAX];
+	int  hidden = 0;				//default 0,wifi show
+	int  disabled = 0;				//default 0,wifi on
+	int  type = 0;					//default 0,2.4G
+	int  auth = 0;					//default 0,no auth
 	char index[64] = {0};
 	char res[1024] = {0};
 	int id = DEFAULT_TMPLATE_ID +1;
@@ -1668,7 +1895,23 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 	if (tb[NAME]){
 		tpname = blobmsg_get_string (tb[NAME]);
 	}
+
+	if (tb[HIDDEN]){
+		hidden = blobmsg_get_u32 (tb[HIDDEN]);
+	}
+
+	if (tb[DISABLED]){
+		disabled = blobmsg_get_u32 (tb[DISABLED]);
+	}
+
+	if (tb[TYPE]){
+		type = blobmsg_get_u32 (tb[TYPE]);
+	}
 	
+	if (tb[AUTH]){
+		auth = blobmsg_get_u32 (tb[AUTH]);
+	}
+
 	blob_buf_init (&b, 0);
 	memset(&p, 0, sizeof(tmplat_list));
 	if (ssid == NULL || ssid[0] == 0){
@@ -1695,6 +1938,35 @@ static int ubus_proc_templateadd(struct ubus_context *ctx, struct ubus_object *o
 		strcpy(p.tmplate_info.tpname, tpname);
 	}
 	
+	if (data_range_in(hidden,0,1) == 0){
+
+		blobmsg_add_string (&b, "msg", "hidden value(0 or 1) invalid");
+		goto error;
+	}else{
+		p.tmplate_info.tmplat_ssid_info.hidden = hidden;
+	}
+
+	if (data_range_in(disabled,0,1) == 0){
+		blobmsg_add_string (&b, "msg", "disabled value(0 or 1) invalid");
+		goto error;
+	}else{
+		p.tmplate_info.tmplat_ssid_info.disabled = disabled;
+	}
+
+	if (data_range_in(type,0,1) == 0){
+		blobmsg_add_string (&b, "msg", "type value(0 or 1) invalid");
+		goto error;
+	}else{
+		p.tmplate_info.tmplat_ssid_info.type = type;
+	}
+
+	if (data_range_in(auth,0,1) == 0){
+		blobmsg_add_string (&b, "msg", "auth value(0 or 1) invalid");
+		goto error;
+	}else{
+		p.tmplate_info.tmplat_ssid_info.auth = auth;
+	}
+
 	strcpy (&(p.tmplate_info.tmplat_ssid_info.ssid[0]), ssid);
 	p.tmplate_info.id = id;
 
@@ -1931,9 +2203,9 @@ error:
 static const struct ubus_method acd_methods[] = {
 	UBUS_METHOD_MASK ("apinfo", ubus_proc_apinfo, apinfo_policy, 1 << MAC),
 	UBUS_METHOD_MASK ("apedit", ubus_proc_apedit, apedit_policy, 1 << MAC | 1 << NAME | 1 << TMPLATID | 1 << CHANNEL | 1 << TXPOWER | 1<< AIP),
-	UBUS_METHOD_MASK ("templatedit", ubus_proc_templatedit, templatedit_policy, 1 << TMPLATID | 1 << SSID | 1 << ENCRYPT | 1 << NAME | 1 << KEY | 1<<EDIT_FLAG),
+	UBUS_METHOD_MASK ("templatedit", ubus_proc_templatedit, templatedit_policy, 1 << TMPLATID | 1 << SSID | 1 << ENCRYPT | 1 << NAME | 1 << KEY | 1<<AUTH | 1<<TYPE | 1<< DISABLED | 1<<HIDDEN | 1<<EDIT_FLAG),
 	UBUS_METHOD_MASK ("templatelist", ubus_proc_templatelist, templatelist_policy, 1 << TMPLATID),
-	UBUS_METHOD_MASK ("templateadd", ubus_proc_templateadd, templateadd_policy, 1 << SSID | 1 << ENCRYPT | 1 << NAME | 1 << KEY),
+	UBUS_METHOD_MASK ("templateadd", ubus_proc_templateadd, templateadd_policy, 1 << SSID | 1 << ENCRYPT | 1 << NAME | 1 << KEY | 1<<AUTH | 1<<TYPE | 1<< DISABLED | 1<<HIDDEN ),
 	UBUS_METHOD_MASK ("templatedel", ubus_proc_templatedel, templatedel_policy, 1 << TMPLATID),
 	UBUS_METHOD_MASK ("apdel", ubus_proc_apdel, apdel_policy,  1 << MAC | 1 << SN),
 	UBUS_METHOD_MASK ("apcmd", ubus_proc_apcmd, apcmd_policy, 1 << MAC | 1 << SN | 1 << CMD | 1 << ADDR),
@@ -2023,6 +2295,11 @@ int stalist_hash_init(void)
 void aplist_entry_init(ap_status_entry aplist_node)
 {
 	memset(&aplist_node,0,sizeof(ap_status_entry));
+}
+
+void stalist_entry_init(sta_entry stalist_node)
+{
+	memset(&stalist_node,0,sizeof(stalist_node));
 }
 
 void acd_init(void)
