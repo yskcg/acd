@@ -436,7 +436,6 @@ void tplist_init(void)
 				optstr = strstr (p_key_value, "=");
 				strncpy (key, p_key_value, optstr - p_key_value);
 				strncpy (value, optstr + 1,strlen(optstr)-1);
-				print_debug_log("%s %d key:%s value:%s\n",__FUNCTION__,__LINE__,key,value);
 				/*fill data in the double link list node*/
 				if (strcasecmp(key, "name") == 0){
 					strcpy(tp.tmplate_info.tpname,value);
@@ -450,16 +449,12 @@ void tplist_init(void)
 					strcpy(tp.tmplate_info.tmplat_ssid_info.key,value);
 					tp.tmplate_info.tmplat_ssid_info.key[strlen(value)-1] = '\0';
 				}else if (strcasecmp (key, "auth") == 0){
-					print_debug_log("auth:%s %d",value,atoi(value));
 					tp.tmplate_info.tmplat_ssid_info.auth = (char )atoi(value);
 				}else if (strcasecmp (key, "type") == 0){
-					print_debug_log("type:%s %d\n",value,atoi(value));
 					tp.tmplate_info.tmplat_ssid_info.type = (char )atoi(value);
 				}else if (strcasecmp (key, "disabled") == 0){
-					print_debug_log("disabled:%s %d\n",value,atoi(value));
 					tp.tmplate_info.tmplat_ssid_info.disabled = (char )atoi(value);
 				}else if (strcasecmp (key, "hidden") == 0){
-					print_debug_log("hidden:%s %d\n",value,atoi(value));
 					tp.tmplate_info.tmplat_ssid_info.hidden = (char )atoi(value);
 				}
 
@@ -2355,6 +2350,7 @@ int main(int argc, char **argv)
 	}
 	
 	uloop_init ();
+	sta_noauth_init();
 	signal (SIGPIPE, SIG_IGN);
 
 	ctx = ubus_connect (ubus_socket);

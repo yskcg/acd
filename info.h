@@ -68,6 +68,8 @@
 #define WIFI_SIGNAL_TYPE_5G		1
 #define WIFI_SIGNAL_ENABLE		1
 #define WIFI_SIGNAL_DISABLE		0
+#define WIFI_SIGNAL_ENABLE_AUTH		1
+#define WIFI_SIGNAL_ENABLE_UNAUTH	0
 
 #ifndef container_of
 #define container_of(ptr, type, member)                                 \
