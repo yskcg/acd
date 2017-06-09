@@ -135,6 +135,8 @@ void check_station_status(struct uloop_timeout *t)
 			td = tv_diff(&tv, &station->time_stamp);
 
 			if (td > STATION_STATUS_CHECK_INTERVAL) {	//3 minute
+				/*del the WhiteList_wifi_src*/
+				ipset_del(station->mac,GUEST_LIST_MAC);
 				/*del the node*/
 				hlist_del(&station->hlist);
 				free(station);

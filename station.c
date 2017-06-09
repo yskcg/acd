@@ -2,7 +2,7 @@
 
 static struct uci_context *ctx = NULL;
 
-static int ipset_add(u8_t *addr,char *name_entry)
+int ipset_add(u8_t *addr,char *name_entry)
 {
 	char shell_cmd[256] = {0};
 
@@ -17,12 +17,13 @@ static int ipset_add(u8_t *addr,char *name_entry)
 	return 0;
 }
 
-static int ipset_del(u8_t *addr,char *name_entry)
+int ipset_del(u8_t *addr,char *name_entry)
 {
 	char shell_cmd[256] = {0};
 	if (addr == NULL || name_entry == NULL){
 		return -1;
 	}
+
 	sprintf(shell_cmd,"ipset del WhiteList_wifi_src %2x:%2x:%2x:%2x:%2x:%2x\n",addr[0],addr[1],addr[2],addr[3],addr[4],addr[5]);
 	print_debug_log("%s %d \n",__FUNCTION__,__LINE__);
 	system(shell_cmd);
