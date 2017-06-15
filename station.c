@@ -60,6 +60,12 @@ sta_entry *stalist_entry_update(sta_entry *sta_info)
 		return NULL;
 	}else{
 		memcpy(stalist_node->ap_mac,sta_info->ap_mac,ETH_ALEN);
+		if(sta_info->type){
+			ap->sta_5G_num = ap->sta_5G_num +1;
+		}else{
+			ap->sta_2G_num = ap->sta_2G_num +1;
+		}
+		ap->sta_num = ap->sta_num +1;
 	}
 	
 	//if(stalist_node->ssid != NULL && strcmp((const char *)stalist_node->ssid ,(const char *)sta_info->ssid) != 0 ){

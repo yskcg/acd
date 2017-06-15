@@ -53,8 +53,8 @@
 #define AP_MAX_BINDID       8
 #define ILLEGAL_TMPLATE_ID  -1
 #define DEFAULT_TMPLATE_ID  0
-#define DEFAULT_TMPLATE_ID_MAP 0x01
-#define DEFAULT_TMP_GUEST_ID 1
+#define DEFAULT_TMPLATE_ID_MAP 0x07
+
 #define MAX_SSID_LEN        32
 #define MAX_TMP_ID          7
 #define AC_INIT_OFFLINE     0
@@ -233,6 +233,9 @@ typedef struct {
     
     int		fd;
     int 	apid;					    //用于标示 在aplist 文件中ap_cfg_x 的number
+	unsigned int 	sta_num;			//用于标示ap 上总用户数
+	unsigned int	sta_2G_num;			//用于标示ap 上2.4G用户数
+	unsigned int 	sta_5G_num;			//用于标示ap 上5G用户数
     
     ap_cmd 			    cmd;
     ecode_ud_spro 		ud;

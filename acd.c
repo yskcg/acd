@@ -125,6 +125,8 @@ void check_station_status(struct uloop_timeout *t)
 	struct timeval tv;
 	sta_entry *station = NULL;
 	struct hlist_node *tmp;
+	ap_status_entry *ap = NULL;
+	struct hlist_head *head = NULL;
 
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		if (hlist_empty(&(stalist.hash[i]))){
@@ -137,6 +139,24 @@ void check_station_status(struct uloop_timeout *t)
 			if (td > STATION_STATUS_CHECK_INTERVAL) {	//3 minute
 				/*del the WhiteList_wifi_src*/
 				ipset_del(station->mac,GUEST_LIST_MAC);
+				/*find the ap */
+				head = &aplist.hash[aplist_entry_hash(station->ap_mac)];
+				ap = aplist_entry_find(head,station->ap_mac);
+				if(ap != NULL ){
+					if(station->type){
+						if(ap->sta_5G_num >0){
+							ap->sta_5G_num = ap->sta_5G_num -1;
+						}
+					}else{
+						if(ap->sta_2G_num >0){
+							ap->sta_2G_num = ap->sta_2G_num -1;
+						}
+					}
+					if(ap->sta_num >0){
+						ap->sta_num = ap->sta_num -1;
+					}
+				}
+
 				/*del the node*/
 				hlist_del(&station->hlist);
 				free(station);
@@ -859,6 +879,7 @@ void free_mem(ap_status_entry *ap)
 int ap_online_proc(ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr)
 {
 	int len;
+	int i;
 	char res[1024 * 2] = {0};
 	char index[64] = {0};
 	tmplat_list *tp = NULL;
@@ -869,8 +890,12 @@ int ap_online_proc(ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr)
 	
 	/*when the hash node is new creat,so,use the default tmplate id*/
 	if( ap->status ==AC_NEW_HASH_NODE ){
-		if ((tp = template_find_by_id (DEFAULT_TMPLATE_ID)) != NULL){
-			memcpy(&(ap->apinfo.wifi_info.ssid_info[DEFAULT_TMPLATE_ID]),&(tp->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
+		for ( i = 0;i<=AP_MAX_BINDID;i++){
+			if (ap->apinfo.id & (0x01<<i)){
+				if ((tp = template_find_by_id(i)) != NULL){
+					memcpy(&(ap->apinfo.wifi_info.ssid_info[i]),&(tp->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
+				}
+			}
 		}
 	}
 	
@@ -1031,12 +1056,14 @@ int prepare_tmplist_data(ap_status_entry * ap)
 
 		for (i = 0; i<=MAX_TMP_ID; i++){
 			if(ap->apinfo.id & (0x01<<i)){
-				sprintf(temp_ssid+strlen((const char *)temp_ssid),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].ssid[0]));
-				sprintf(temp_encrypt+strlen((const char *)temp_encrypt),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].encrypt[0]));
-				sprintf(temp_key+strlen((const char *)temp_key),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].key[0]));
-				sprintf(temp_disabled+strlen((const char *)temp_disabled),"%d,",ap->apinfo.wifi_info.ssid_info[i].disabled);
-				sprintf(temp_hidden+strlen((const char *)temp_hidden),"%d,",ap->apinfo.wifi_info.ssid_info[i].hidden);
-				sprintf(temp_type+strlen((const char *)temp_type),"%d,",ap->apinfo.wifi_info.ssid_info[i].type);
+				if (template_find_by_id(i) != NULL){
+					sprintf(temp_ssid+strlen((const char *)temp_ssid),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].ssid[0]));
+					sprintf(temp_encrypt+strlen((const char *)temp_encrypt),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].encrypt[0]));
+					sprintf(temp_key+strlen((const char *)temp_key),"%s,",&(ap->apinfo.wifi_info.ssid_info[i].key[0]));
+					sprintf(temp_disabled+strlen((const char *)temp_disabled),"%d,",ap->apinfo.wifi_info.ssid_info[i].disabled);
+					sprintf(temp_hidden+strlen((const char *)temp_hidden),"%d,",ap->apinfo.wifi_info.ssid_info[i].hidden);
+					sprintf(temp_type+strlen((const char *)temp_type),"%d,",ap->apinfo.wifi_info.ssid_info[i].type);
+				}
 			}
 		}
 
@@ -1187,7 +1214,9 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 {
 	int i;
 	char mac_temp[32] = {'\0'};
+	char ssid_temp[64] = {'\0'};
 	void *arr = NULL;
+	char *table = NULL;
 	long td;
 	struct timeval tv;
 	sta_entry *station = NULL;
@@ -1210,7 +1239,9 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	}
 	
 	blobmsg_add_u32 (buf, "online", ap->online);
-
+	blobmsg_add_u32 (buf, "sta_num", ap->sta_num);
+	blobmsg_add_u32 (buf, "sta_2G_num", ap->sta_2G_num);
+	blobmsg_add_u32 (buf, "sta_5G_num", ap->sta_5G_num);
 	arr = blobmsg_open_array (buf, "id");
 	for ( i = 0;i<=AP_MAX_BINDID;i++){
 		if (ap->apinfo.id & (0x01<<i)){
@@ -1246,6 +1277,7 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 		}
 		hlist_for_each_entry(station, &(stalist.hash[i]), hlist) {
 			if (ether_addr_equal((const u8 *)station->ap_mac,(const u8 *)ap->apinfo.apmac)){
+				table = blobmsg_open_table (&b, NULL);
 				memset(mac_temp,'\0',sizeof(mac_temp));
 				sprintf(mac_temp,"%02x:%02x:%02x:%02x:%02x:%02x",\
 					station->mac[0]&0xff,\
@@ -1254,7 +1286,22 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 					station->mac[3]&0xff,\
 					station->mac[4]&0xff,\
 					station->mac[5]&0xff);
-				blobmsg_add_string(buf, "", mac_temp);
+				blobmsg_add_string(buf, "mac", mac_temp);
+				memset(mac_temp,'\0',sizeof(mac_temp));
+				sprintf(mac_temp,"%02x:%02x:%02x:%02x:%02x:%02x",\
+					station->bssid[0]&0xff,\
+					station->bssid[1]&0xff,\
+					station->bssid[2]&0xff,\
+					station->bssid[3]&0xff,\
+					station->bssid[4]&0xff,\
+					station->bssid[5]&0xff);
+				blobmsg_add_string(buf, "bssid", mac_temp);
+				blobmsg_add_u32 (buf, "online", station->status);
+				blobmsg_add_u32 (buf, "type", station->type);
+				memset(ssid_temp,'\0',sizeof(ssid_temp));
+				sprintf(ssid_temp,"%s",station->ssid);
+				blobmsg_add_string(buf, "ssid", ssid_temp);
+				blobmsg_close_table (&b, table);
 			}
 		}
 	}
