@@ -155,6 +155,33 @@ void check_station_status(struct uloop_timeout *t)
 					if(ap->sta_num >0){
 						ap->sta_num = ap->sta_num -1;
 					}
+
+					/*for guest network station sum*/
+					/*find the ssid ->templist id*/
+					for (i = 0; i<=MAX_TMP_ID; i++){
+						if(ap->apinfo.id & (0x01<<i)){
+							if(ap->apinfo.wifi_info.ssid_info[i].auth == WIFI_SIGNAL_DISABLE && \
+							   strcmp((const char *)ap->apinfo.wifi_info.ssid_info[i].ssid,(const char *)station->ssid) == 0){
+
+								/*sum the num of guest*/
+								if(station->type){
+									if(ap->sta_guest_5G_num >0 ){
+										ap->sta_guest_5G_num = ap->sta_guest_5G_num -1;
+									}
+								}else{
+									if(ap->sta_guest_2G_num >0){
+										ap->sta_guest_2G_num = ap->sta_guest_2G_num +1;	
+									}
+								}
+
+								if (ap->sta_guest_num >0){
+									ap->sta_guest_num = ap->sta_guest_num +1;
+								}
+
+								break;
+							}
+						}
+					}
 				}
 
 				/*del the node*/
@@ -1242,6 +1269,10 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	blobmsg_add_u32 (buf, "sta_num", ap->sta_num);
 	blobmsg_add_u32 (buf, "sta_2G_num", ap->sta_2G_num);
 	blobmsg_add_u32 (buf, "sta_5G_num", ap->sta_5G_num);
+
+	blobmsg_add_u32 (buf, "sta_guest_num", ap->sta_guest_num);
+	blobmsg_add_u32 (buf, "sta_guest_2G_num", ap->sta_guest_2G_num);
+	blobmsg_add_u32 (buf, "sta_guest_5G_num", ap->sta_guest_5G_num);
 	arr = blobmsg_open_array (buf, "id");
 	for ( i = 0;i<=AP_MAX_BINDID;i++){
 		if (ap->apinfo.id & (0x01<<i)){

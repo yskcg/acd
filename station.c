@@ -67,10 +67,7 @@ sta_entry *stalist_entry_update(sta_entry *sta_info)
 		}
 		ap->sta_num = ap->sta_num +1;
 	}
-	
-	//if(stalist_node->ssid != NULL && strcmp((const char *)stalist_node->ssid ,(const char *)sta_info->ssid) != 0 ){
-		//ipset_del(stalist_node->mac,GUEST_LIST_MAC);
-	//}
+
 	ipset_del(stalist_node->mac,GUEST_LIST_MAC);
 	
 	memset(stalist_node->ssid,0,sizeof(stalist_node->ssid));
@@ -86,6 +83,15 @@ sta_entry *stalist_entry_update(sta_entry *sta_info)
 				   strcmp((const char *)ap->apinfo.wifi_info.ssid_info[i].ssid,(const char *)stalist_node->ssid) == 0){
 					/*add this station to the guest network*/
 					ipset_add(stalist_node->mac,GUEST_LIST_MAC);
+
+					/*sum the num of guest*/
+					if(sta_info->type){
+						ap->sta_guest_5G_num = ap->sta_guest_5G_num +1;
+					}else{
+						ap->sta_guest_2G_num = ap->sta_guest_2G_num +1;
+					}
+					ap->sta_guest_num = ap->sta_guest_num +1;
+
 					break;
 				}
 			}

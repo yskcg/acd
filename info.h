@@ -236,6 +236,9 @@ typedef struct {
 	unsigned int 	sta_num;			//用于标示ap 上总用户数
 	unsigned int	sta_2G_num;			//用于标示ap 上2.4G用户数
 	unsigned int 	sta_5G_num;			//用于标示ap 上5G用户数
+	unsigned int 	sta_guest_num;		//用于标示ap 访客网络的用户数
+	unsigned int 	sta_guest_2G_num;	//用于标示ap 访客网络的2.4G用户数
+	unsigned int 	sta_guest_5G_num;	//用于标示ap 访客网络的5G用户数
     
     ap_cmd 			    cmd;
     ecode_ud_spro 		ud;
