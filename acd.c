@@ -1688,6 +1688,10 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	int  disabled = 0;				//default 0,wifi on
 	int  type = 0;					//default 0,2.4G
 	int  auth = 0;					//default 0,no auth
+	char hidden_changed = 0;
+	char disabled_changed = 0;
+	char type_changed = 0;
+	char auth_changed = 0;
 	char edit_temp0_flag = false;
 	char index[64] = {0};
 	char res[1024] = {0};
@@ -1725,18 +1729,22 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 
 	if (tb[HIDDEN]){
 		hidden = blobmsg_get_u32 (tb[HIDDEN]);
+		hidden_changed = 1;
 	}
 
 	if (tb[DISABLED]){
 		disabled = blobmsg_get_u32 (tb[DISABLED]);
+		disabled_changed = 1;
 	}
 
 	if (tb[TYPE]){
 		type = blobmsg_get_u32 (tb[TYPE]);
+		type_changed = 1;
 	}
 
 	if (tb[AUTH]){
 		auth = blobmsg_get_u32 (tb[AUTH]);
+		auth_changed = 1;
 	}
 
 	if (id < 0){
@@ -1750,6 +1758,13 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		goto error;
 	}
 	
+	/*get the templatedit id*/
+	tp = template_find_by_id (id);
+	if(tp == NULL){
+		blobmsg_add_string (&b, "msg", "template id invalid");
+		goto error;
+	}
+
 	if (ssid != NULL && ssid[0] != 0){
 		strcpy (tp->tmplate_info.tmplat_ssid_info.ssid, ssid);
 	}
@@ -1763,28 +1778,36 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		blobmsg_add_string (&b, "msg", "hidden value(0 or 1) invalid");
 		goto error;
 	}else{
-		tp->tmplate_info.tmplat_ssid_info.hidden = hidden;
+		if(hidden_changed){
+			tp->tmplate_info.tmplat_ssid_info.hidden = hidden;
+		}
 	}
 
 	if (data_range_in(disabled,0,1) == 0){
 		blobmsg_add_string (&b, "msg", "disabled value(0 or 1) invalid");
 		goto error;
 	}else{
-		tp->tmplate_info.tmplat_ssid_info.disabled = disabled;
+		if(disabled_changed){
+			tp->tmplate_info.tmplat_ssid_info.disabled = disabled;
+		}
 	}
 
 	if (data_range_in(type,0,2) == 0){
 		blobmsg_add_string (&b, "msg", "type value(0 or 1,2) invalid");
 		goto error;
 	}else{
-		tp->tmplate_info.tmplat_ssid_info.type = type;
+		if(type_changed){
+			tp->tmplate_info.tmplat_ssid_info.type = type;
+		}
 	}
 
 	if (data_range_in(auth,0,1) == 0){
 		blobmsg_add_string (&b, "msg", "auth value(0 or 1) invalid");
 		goto error;
 	}else{
-		tp->tmplate_info.tmplat_ssid_info.auth = auth;
+		if(auth_changed){
+			tp->tmplate_info.tmplat_ssid_info.auth = auth;
+		}
 	}
 
 	if (encrypt != NULL && encrypt[0] != 0){
