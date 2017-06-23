@@ -64,10 +64,21 @@ sta_info 4 {
 		 sta_ap_mac 	5:	string
 	}
 	response {
-		ok 0 : boolean
+		 ok 			0 : boolean
 	}
 
 }
+
+ac_info 5 {
+	request {
+		ac_type 			0 :integer
+	}
+	response {
+		ok 				0 : boolean
+		ac_info			1 : string
+	}
+}
+
 ]]
 
 local f = io.open("./apc.sp", "w+")

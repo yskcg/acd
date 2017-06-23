@@ -16,14 +16,17 @@ static char temp_encrypt[TEMP_SSID_BUF_SIZE]  = {'\0'};
 static char temp_hidden[TEMP_SSID_BUF_SIZE] = {'\0'};
 static char temp_disabled[TEMP_SSID_BUF_SIZE] = {'\0'};
 static char temp_type[TEMP_SSID_BUF_SIZE] = {'\0'};
+static char temp_device_info[TEMP_SSID_BUF_SIZE] = {'\0'};
 
 u32 ap_listdb_salt;
 u32 sta_listdb_salt;
 ap_list 	aplist;							//ap information list
 sta_list 	stalist;						//station information list
 tmplat_list *tplist 	= NULL;
+
 static ap_status_entry p_temp_ap_info;
 static sta_entry p_temp_sta_info;
+static device_info	 ac_info;
 
 void gettime(struct timeval *tv)
 {
@@ -569,7 +572,12 @@ int sproto_read_entity(char *filename)
 int sproto_encode_cb(void *ud, const char *tagname, int type, int index, struct sproto_type *st, void *value, int length)
 {
 	struct encode_ud *self = ud;
-	ap_status_entry *apcfg = container_of (ud, ap_status_entry, ud);
+	size_t sz;
+	ap_status_entry *apcfg = NULL;
+
+	if (self->type <=AP_CMD){
+		apcfg = container_of (ud, ap_status_entry, ud);
+	}
 
 	if (length < 2 * SIZEOF_LENGTH){
 		return 0;
@@ -602,9 +610,14 @@ int sproto_encode_cb(void *ud, const char *tagname, int type, int index, struct 
 		}
 		
 		case SPROTO_TSTRING: {
-			fill_encode_data (apcfg, (char *) tagname, (char *) value);
-			print_debug_log("[debug] [encode] [%s:] [%s]\n", tagname, (char *)value);
-			size_t sz = strlen ((char *) value);
+			if (strcasecmp(tagname, "ac_info") == 0){
+					strcpy(value,temp_device_info);
+					sz = strlen(value);
+			}else{
+				fill_encode_data (apcfg, (char *) tagname, (char *) value);
+				print_debug_log("[debug] [encode] [%s:] [%s]\n", tagname, (char *)value);
+				sz = strlen ((char *) value);
+			}
 			return sz;
 		}
 		
@@ -965,10 +978,14 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 	int slen;
 	int headlen;
 	int status = 0;
+	int read_size = 0;
 	ecode_ud_spro 	ud;
 	char unpack[1024 * 6] = { 0 };
+	char shell_cmd [128] = {0};
+	char ac_infos[128] = {0};
 	sta_entry *stal= NULL;
 	ap_status_entry *apl = NULL, *ap = NULL;
+	FILE *ac_info_fp = NULL;
 	
 	print_debug_log ("[debug] [rcv] [data len:%d, fd:%d]\n", len, cl->s.fd.fd);
 	
@@ -999,6 +1016,44 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 	
 		stalist_entry_update(stal);
 	
+	}else if (ud.type == AC_INFO){
+		memcpy(&stal->ud,&ud,sizeof(ud));
+		print_debug_log("%s %d type:%d session:%d\n",__FUNCTION__,__LINE__,stal->ud.type,stal->ud.session);
+		/*sproto encoded data parse*/
+		if (sproto_parser (unpack, headlen, &(stal->ud)) <= 0){
+			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
+		}
+
+		/*must dynamic get the ac info*/
+		sprintf(shell_cmd,"ubus call sysd sysinfo > %s",DEVICE_INFO);
+		system(shell_cmd);
+
+		memset(&ac_info,0,sizeof(ac_info));
+		if(access(DEVICE_INFO,F_OK) == 0){
+			ac_info_fp = fopen(DEVICE_INFO,"r");
+			if(ac_info_fp != NULL){
+				read_size = fread(ac_infos,sizeof(ac_infos),1,ac_info_fp);
+				if(read_size <= 0){
+					return 0;
+				}else{
+					json_parse(ac_infos,"sn",ac_info.sn);
+					json_parse(ac_infos,"moid",ac_info.moid);
+					json_parse(ac_infos,"dt",&(ac_info.dt));
+					print_debug_log("%s %d ac_infos:%s sn:%s moid:%s dt:%d\n",__FUNCTION__,__LINE__,ac_infos,ac_info.sn,ac_info.moid,ac_info.dt);
+				}
+				fclose(ac_info_fp);
+				unlink(DEVICE_INFO);
+			}
+		}
+		ac_info.fd = cl->s.fd.fd;
+		ac_info.ud.type = AC_INFO;
+		ac_info.ud.ok = RESPONSE_OK;
+		ac_info.ud.session = SPROTO_RESPONSE;
+
+		if ((slen = send_acinfo_to_ap (&ac_info)) <= 0){
+			goto error;
+		}
+
 	}else{
 		memcpy(&apl->ud,&ud,sizeof(ud));
 		if (sproto_parser (unpack, headlen, &(apl->ud)) <= 0){
@@ -1105,6 +1160,23 @@ int prepare_tmplist_data(ap_status_entry * ap)
 	return 0;
 }
 
+int prepare_device_data(device_info * ac)
+{
+	int i;
+
+	if (ac == NULL){
+		return -1;
+	}
+	
+	if(ac->ud.type == AC_INFO && ac->ud.session == SPROTO_RESPONSE){
+		memset(temp_device_info,0,sizeof(temp_device_info));
+	
+		sprintf(temp_device_info,"{\"sn\":\"%s\",\"moid\":\"%s\",\"dt\":%d}",ac->sn,ac->moid,ac->dt);
+	}
+
+	return 0;
+}
+
 int send_data_to_ap (ap_status_entry * ap)
 {
 	int psize;
@@ -1123,6 +1195,27 @@ int send_data_to_ap (ap_status_entry * ap)
 	}
 	
 	len = write (ap->fd, res, psize);
+
+	return len;
+}
+
+int send_acinfo_to_ap (device_info * ac)
+{
+	int psize;
+	int len;
+	char res[BUFLEN] = { 0 };
+
+	if (ac == NULL){
+		return -1;
+	}
+
+	prepare_device_data(ac);
+	psize = sproto_encode_data (&ac->ud, res);
+	if (ac->fd <= 0){
+		return 0;
+	}
+
+	len = write (ac->fd, res, psize);
 
 	return len;
 }
@@ -1680,8 +1773,8 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		tp->tmplate_info.tmplat_ssid_info.disabled = disabled;
 	}
 
-	if (data_range_in(type,0,1) == 0){
-		blobmsg_add_string (&b, "msg", "type value(0 or 1) invalid");
+	if (data_range_in(type,0,2) == 0){
+		blobmsg_add_string (&b, "msg", "type value(0 or 1,2) invalid");
 		goto error;
 	}else{
 		tp->tmplate_info.tmplat_ssid_info.type = type;

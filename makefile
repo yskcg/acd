@@ -15,11 +15,14 @@ sproto.o:sproto.c sproto.h msvcint.h
 station.o:station.c station.h 
 	@$(CC) -Wall -g -c station.c station.h
 
+json_parse.o:json_parse.c json_parse.h
+	@$(CC) -Wall -g -c json_parse.c
+
 acd.o:acd.c acd.h  
 	@$(CC) -Wall -g -c acd.c acd.h 
 	
-acd:acd.o sproto.o rw.o random.o station.o
-	@$(CC) -Wall -g -o acd acd.o random.o station.o sproto.o rw.o $(LDFLAGS)
+acd:acd.o sproto.o rw.o random.o station.o json_parse.o
+	@$(CC) -Wall -g -o acd acd.o random.o station.o json_parse.o sproto.o rw.o  $(LDFLAGS)
 #	@lua apc.lua
 
 	

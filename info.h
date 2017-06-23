@@ -40,6 +40,7 @@
 #define AP_INFO			    2
 #define AP_CMD			    3
 #define STA_INFO			4
+#define AC_INFO				5
 #define RESPONSE_ERROR		0
 #define RESPONSE_PACK	  	0
 #define RESPONSE_OK		    1
@@ -210,6 +211,14 @@ typedef struct encode_ud {
     int session;
     int ok;
 }ecode_ud_spro;
+
+typedef struct {
+	int		fd;
+    char	sn[32];
+	char 	dt;
+	char	moid[32];
+	ecode_ud_spro 	ud;
+}device_info;
 
 typedef struct {
     struct hlist_node	hlist;
