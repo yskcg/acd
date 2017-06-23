@@ -173,12 +173,12 @@ void check_station_status(struct uloop_timeout *t)
 									}
 								}else{
 									if(ap->sta_guest_2G_num >0){
-										ap->sta_guest_2G_num = ap->sta_guest_2G_num +1;	
+										ap->sta_guest_2G_num = ap->sta_guest_2G_num -1;	
 									}
 								}
 
 								if (ap->sta_guest_num >0){
-									ap->sta_guest_num = ap->sta_guest_num +1;
+									ap->sta_guest_num = ap->sta_guest_num -1;
 								}
 
 								break;
@@ -1799,6 +1799,7 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		if(type_changed){
 			tp->tmplate_info.tmplat_ssid_info.type = type;
 		}
+		print_debug_log("%s %d\n",__FUNCTION__,__LINE__);
 	}
 
 	if (data_range_in(auth,0,1) == 0){
