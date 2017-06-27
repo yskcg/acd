@@ -1815,8 +1815,12 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		if (strcasecmp(encrypt, "none") != 0){
 			if (strcasecmp(encrypt,"psk") == 0 ){
 				strcpy (tp->tmplate_info.tmplat_ssid_info.encrypt, encrypt);
+			}else if(strcasecmp(encrypt,"psk-mixed") == 0 ){
+				strcpy (tp->tmplate_info.tmplat_ssid_info.encrypt, encrypt);
+			}else if(strcasecmp(encrypt,"psk2") == 0){
+				strcpy (tp->tmplate_info.tmplat_ssid_info.encrypt, encrypt);
 			}else{
-				blobmsg_add_string (&b, "msg", "the encrypt just support 'psk' method!");
+				blobmsg_add_string (&b, "msg", "Encrypt support 'psk psk-mixed psk2' method!");
 				goto error;
 			}
 
