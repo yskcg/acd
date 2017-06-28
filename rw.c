@@ -321,6 +321,7 @@ sta_entry *stalist_entry_creat(struct hlist_head *head,const u8_t *addr)
 
 	stalist_node = (sta_entry *)calloc(1, sizeof(*stalist_node));;
 	if (stalist_node) {
+		memset(stalist_node,0,sizeof(stalist_node));
 		/*The node operation*/
 		gettime(&stalist_node->time_stamp);
 		memcpy(stalist_node->mac, addr, ETH_ALEN);
@@ -399,8 +400,10 @@ sta_entry *stalist_entry_insert(u8_t *addr)
 		if(!stalist_node){
 			return NULL;
 		}
+		stalist_node->exist_flag = STATION_NEW;
 	}else{
 		gettime(&stalist_node->time_stamp);
+		stalist_node->exist_flag = STATION_EXIST;
 	}
 
 	return stalist_node;

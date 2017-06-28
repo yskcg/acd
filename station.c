@@ -60,12 +60,15 @@ sta_entry *stalist_entry_update(sta_entry *sta_info)
 		return NULL;
 	}else{
 		memcpy(stalist_node->ap_mac,sta_info->ap_mac,ETH_ALEN);
-		if(sta_info->type){
-			ap->sta_5G_num = ap->sta_5G_num +1;
-		}else{
-			ap->sta_2G_num = ap->sta_2G_num +1;
+		
+		if(stalist_node->exist_flag == STATION_NEW){
+			if(sta_info->type){
+				ap->sta_5G_num = ap->sta_5G_num +1;
+			}else{
+				ap->sta_2G_num = ap->sta_2G_num +1;
+			}
+			ap->sta_num = ap->sta_num +1;
 		}
-		ap->sta_num = ap->sta_num +1;
 	}
 
 	ipset_del(stalist_node->mac,GUEST_LIST_MAC);
@@ -83,14 +86,16 @@ sta_entry *stalist_entry_update(sta_entry *sta_info)
 				   strcmp((const char *)ap->apinfo.wifi_info.ssid_info[i].ssid,(const char *)stalist_node->ssid) == 0){
 					/*add this station to the guest network*/
 					ipset_add(stalist_node->mac,GUEST_LIST_MAC);
-
-					/*sum the num of guest*/
-					if(sta_info->type){
-						ap->sta_guest_5G_num = ap->sta_guest_5G_num +1;
-					}else{
-						ap->sta_guest_2G_num = ap->sta_guest_2G_num +1;
+					
+					if(stalist_node->exist_flag == STATION_NEW){
+						/*sum the num of guest*/
+						if(sta_info->type){
+							ap->sta_guest_5G_num = ap->sta_guest_5G_num +1;
+						}else{
+							ap->sta_guest_2G_num = ap->sta_guest_2G_num +1;
+						}
+						ap->sta_guest_num = ap->sta_guest_num +1;
 					}
-					ap->sta_guest_num = ap->sta_guest_num +1;
 
 					break;
 				}

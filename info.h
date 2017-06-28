@@ -27,8 +27,14 @@
 #include <libubox/blobmsg_json.h>
 #include "list.h"
 
-#define TRUE                1
-#define FALSE               0
+#ifndef TRUE
+	#define TRUE                1
+#endif
+
+#ifndef FALSE
+	#define FALSE               0
+#endif
+
 #define SIZEOF_LENGTH 		4
 #define ENCODE_BUFFERSIZE 	2050
 #define ENCODE_MAXSIZE		0x1000000
@@ -71,6 +77,9 @@
 #define WIFI_SIGNAL_DISABLE		0
 #define WIFI_SIGNAL_ENABLE_AUTH		1
 #define WIFI_SIGNAL_ENABLE_UNAUTH	0
+
+#define STATION_NEW				1
+#define STATION_EXIST			2
 
 #ifndef container_of
 #define container_of(ptr, type, member)                                 \
@@ -230,6 +239,7 @@ typedef struct {
 	unsigned char 		ssid[64];
     char 				ip[16];
     char 				name[64];
+	unsigned char 		exist_flag;			  //0:默认初始值；1：新建hash node；2：已建立的hashnode;
 	ecode_ud_spro 		ud;
     struct timeval 		time_stamp;
 }sta_entry;
