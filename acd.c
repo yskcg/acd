@@ -1333,6 +1333,13 @@ static void template_to_blob(struct blob_buf *buf, tmplat_list *t)
 static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 {
 	int i;
+	unsigned int sta_num = 0;
+	unsigned int sta_2G_num = 0;
+	unsigned int sta_5G_num = 0;
+	unsigned int sta_guest_num = 0;
+	unsigned int sta_guest_2G_num = 0;
+	unsigned int sta_guest_5G_num = 0;
+
 	char mac_temp[32] = {'\0'};
 	char ssid_temp[64] = {'\0'};
 	void *arr = NULL;
@@ -1340,6 +1347,7 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	long td;
 	struct timeval tv;
 	sta_entry *station = NULL;
+
 	
 	if (buf == NULL || ap == NULL){
 		return;
@@ -1359,13 +1367,6 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	}
 	
 	blobmsg_add_u32 (buf, "online", ap->online);
-	blobmsg_add_u32 (buf, "sta_num", ap->sta_num);
-	blobmsg_add_u32 (buf, "sta_2G_num", ap->sta_2G_num);
-	blobmsg_add_u32 (buf, "sta_5G_num", ap->sta_5G_num);
-
-	blobmsg_add_u32 (buf, "sta_guest_num", ap->sta_guest_num);
-	blobmsg_add_u32 (buf, "sta_guest_2G_num", ap->sta_guest_2G_num);
-	blobmsg_add_u32 (buf, "sta_guest_5G_num", ap->sta_guest_5G_num);
 	arr = blobmsg_open_array (buf, "id");
 	for ( i = 0;i<=AP_MAX_BINDID;i++){
 		if (ap->apinfo.id & (0x01<<i)){
@@ -1425,12 +1426,37 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 				memset(ssid_temp,'\0',sizeof(ssid_temp));
 				sprintf(ssid_temp,"%s",station->ssid);
 				blobmsg_add_string(buf, "ssid", ssid_temp);
+
+				/*for statistic*/
+				sta_num = sta_num +1;
+
+				if(station->auth == STATION_AUTH_GUEST){
+					if(station->type){
+						sta_guest_5G_num = sta_guest_5G_num +1;
+					}else{
+						sta_guest_2G_num = sta_guest_2G_num +1;
+					}
+					sta_guest_num = sta_guest_num +1;
+				}
+
+				if(station->type){
+					sta_5G_num = sta_5G_num +1;
+				}else{
+					sta_2G_num = sta_2G_num +1;
+				}
+
 				blobmsg_close_table (&b, table);
 			}
 		}
 	}
 	blobmsg_close_array (buf, arr);
-	
+	blobmsg_add_u32 (buf, "sta_num", sta_num);
+	blobmsg_add_u32 (buf, "sta_2G_num", sta_2G_num);
+	blobmsg_add_u32 (buf, "sta_5G_num", sta_5G_num);
+
+	blobmsg_add_u32 (buf, "sta_guest_num", sta_guest_num);
+	blobmsg_add_u32 (buf, "sta_guest_2G_num", sta_guest_2G_num);
+	blobmsg_add_u32 (buf, "sta_guest_5G_num", sta_guest_5G_num);
 	return;
 }
 

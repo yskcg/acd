@@ -96,7 +96,7 @@ sta_entry *stalist_entry_update(sta_entry *sta_info)
 						}
 						ap->sta_guest_num = ap->sta_guest_num +1;
 					}
-
+					stalist_node->auth = STATION_AUTH_GUEST;
 					break;
 				}
 			}

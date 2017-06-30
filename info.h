@@ -80,6 +80,9 @@
 
 #define STATION_NEW				1
 #define STATION_EXIST			2
+#define STATION_AUTH_INIT		0
+#define STATION_AUTH_GUEST		1
+#define STATION_AUTH_AUTH		2
 
 #ifndef container_of
 #define container_of(ptr, type, member)                                 \
@@ -236,6 +239,7 @@ typedef struct {
 	unsigned char 		bssid[6];			  //bssid of station wifi connect
 	unsigned char 		status;				  //1:on;0:off
 	unsigned char 		type;				  //1:5G;0:2.4G
+	unsigned char 		auth;				  //0:默认初始值；1:访客用户；2:认证用户
 	unsigned char 		ssid[64];
     char 				ip[16];
     char 				name[64];
