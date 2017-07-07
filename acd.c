@@ -1087,10 +1087,10 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 
 		if (ap->ud.session == SPROTO_RESPONSE && ap->ud.ok == RESPONSE_OK){
 			ap->ud.ok = 0;
-			if (ap->ud.type == AP_CMD){
-				free_mem(ap);
-				return ACd_STATUS_REBOOT_OK;
-			}
+			//if (ap->ud.type == AP_CMD){
+				//free_mem(ap);
+				//return ACd_STATUS_REBOOT_OK;
+			//}
 			print_debug_log ("[debug] <receive> [response pack]\n");
 
 			return ACd_STATUS_OK;
