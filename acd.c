@@ -440,6 +440,8 @@ void get_ac_info()
 	FILE *ac_info_fp = NULL;
 
 	/*must dynamic get the ac info*/
+
+try:
 	system("ubus wait_for sysd");
 	sprintf(shell_cmd,"ubus call sysd sysinfo > %s",DEVICE_INFO);
 	system(shell_cmd);
@@ -449,8 +451,8 @@ void get_ac_info()
 		ac_info_fp = fopen(DEVICE_INFO,"r");
 		if(ac_info_fp != NULL){
 			read_size = fread(ac_infos,sizeof(ac_infos),1,ac_info_fp);
-			if(read_size <= 0){
-				return ;
+			if(read_size <= 0 || strlen(ac_infos) <=1){
+				goto try;
 			}else{
 				json_parse(ac_infos,"sn",ac_info.sn);
 				json_parse(ac_infos,"moid",ac_info.moid);
