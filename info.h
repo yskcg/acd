@@ -229,6 +229,7 @@ typedef struct {
     char	sn[32];
 	char 	dt;
 	char	moid[32];
+	char 	product[32];
 	ecode_ud_spro 	ud;
 }device_info;
 

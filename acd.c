@@ -432,6 +432,61 @@ void aplist_init(void)
 	
 }
 
+void get_ac_info()
+{
+	int read_size = 0;
+	char shell_cmd [128] = {0};
+	char ac_infos[128] = {0};
+	FILE *ac_info_fp = NULL;
+
+	/*must dynamic get the ac info*/
+	sprintf(shell_cmd,"ubus call sysd sysinfo > %s",DEVICE_INFO);
+	system(shell_cmd);
+
+	memset(&ac_info,0,sizeof(ac_info));
+	if(access(DEVICE_INFO,F_OK) == 0){
+		ac_info_fp = fopen(DEVICE_INFO,"r");
+		if(ac_info_fp != NULL){
+			read_size = fread(ac_infos,sizeof(ac_infos),1,ac_info_fp);
+			if(read_size <= 0){
+				return ;
+			}else{
+				json_parse(ac_infos,"sn",ac_info.sn);
+				json_parse(ac_infos,"moid",ac_info.moid);
+				json_parse(ac_infos,"dt",&(ac_info.dt));
+
+				/*get the ac product name*/
+				if(ac_info.dt == 5){
+					strcpy(ac_info.product,"MW1000X");
+					ac_info.product[strlen(ac_info.product)] = '\0';
+				}else if(ac_info.dt == 6){
+					strcpy(ac_info.product,"MW2000E");
+					ac_info.product[strlen(ac_info.product)] = '\0';
+				}else if(ac_info.dt == 9){
+					strcpy(ac_info.product,"MW500X");
+					ac_info.product[strlen(ac_info.product)] = '\0';
+				}else if(ac_info.dt == 11){
+					strcpy(ac_info.product,"MW3000EF");
+					ac_info.product[strlen(ac_info.product)] = '\0';
+				}else if(ac_info.dt == 12){
+					strcpy(ac_info.product,"MW300M");
+					ac_info.product[strlen(ac_info.product)] = '\0';
+				}else if(ac_info.dt == 16){
+					strcpy(ac_info.product,"MW150M");
+					ac_info.product[strlen(ac_info.product)] = '\0';
+				}else if(ac_info.dt == 22){
+					strcpy(ac_info.product,"BM150M");
+					ac_info.product[strlen(ac_info.product)] = '\0';
+				}
+		
+				print_debug_log("%s %d ac_infos:%s sn:%s moid:%s dt:%d\n",__FUNCTION__,__LINE__,ac_infos,ac_info.sn,ac_info.moid,ac_info.dt);
+			}
+			fclose(ac_info_fp);
+			unlink(DEVICE_INFO);
+		}
+	}
+}
+
 void tplist_init(void)
 {
 
@@ -440,6 +495,7 @@ void tplist_init(void)
 	char buf[512];
 	char key[32] = {'\0'};
 	char value[128] = {'\0'};
+	char default_ssid[32] = {'\0'}; 
 	char *optstr;
 	FILE *fp =NULL;
 	char *p_buf = NULL;
@@ -468,7 +524,8 @@ void tplist_init(void)
 	memset(buf,'\0',sizeof(512));
 	if (file_size == 0){
 		/*no contents - write the default value for default template*/
-		strcpy(buf, "name=default|id=0|ssid=MoreWiFi|encrypt=none|key=|auth=0|type=0|disabled=0|hidden=0");
+		strcpy(default_ssid,ac_info.product);
+		sprintf(buf, "name=default|id=0|ssid=%s|encrypt=none|key=|auth=0|type=0|disabled=0|hidden=0",default_ssid);
 		file_write(TP_LIST_FILE, "id=0", buf);
 	}
 
@@ -978,14 +1035,11 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 	int slen;
 	int headlen;
 	int status = 0;
-	int read_size = 0;
 	ecode_ud_spro 	ud;
 	char unpack[1024 * 6] = { 0 };
-	char shell_cmd [128] = {0};
-	char ac_infos[128] = {0};
 	sta_entry *stal= NULL;
 	ap_status_entry *apl = NULL, *ap = NULL;
-	FILE *ac_info_fp = NULL;
+	
 	
 	print_debug_log ("[debug] [rcv] [data len:%d, fd:%d]\n", len, cl->s.fd.fd);
 	
@@ -1025,26 +1079,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 		}
 
 		/*must dynamic get the ac info*/
-		sprintf(shell_cmd,"ubus call sysd sysinfo > %s",DEVICE_INFO);
-		system(shell_cmd);
-
-		memset(&ac_info,0,sizeof(ac_info));
-		if(access(DEVICE_INFO,F_OK) == 0){
-			ac_info_fp = fopen(DEVICE_INFO,"r");
-			if(ac_info_fp != NULL){
-				read_size = fread(ac_infos,sizeof(ac_infos),1,ac_info_fp);
-				if(read_size <= 0){
-					return 0;
-				}else{
-					json_parse(ac_infos,"sn",ac_info.sn);
-					json_parse(ac_infos,"moid",ac_info.moid);
-					json_parse(ac_infos,"dt",&(ac_info.dt));
-					print_debug_log("%s %d ac_infos:%s sn:%s moid:%s dt:%d\n",__FUNCTION__,__LINE__,ac_infos,ac_info.sn,ac_info.moid,ac_info.dt);
-				}
-				fclose(ac_info_fp);
-				unlink(DEVICE_INFO);
-			}
-		}
+		get_ac_info();
 		ac_info.fd = cl->s.fd.fd;
 		ac_info.ud.type = AC_INFO;
 		ac_info.ud.ok = RESPONSE_OK;
@@ -1162,8 +1197,6 @@ int prepare_tmplist_data(ap_status_entry * ap)
 
 int prepare_device_data(device_info * ac)
 {
-	int i;
-
 	if (ac == NULL){
 		return -1;
 	}
@@ -2550,6 +2583,7 @@ void acd_init(void)
 	aplist_hash_init();
 	stalist_hash_init();
 	aplist_entry_init(p_temp_ap_info);
+	get_ac_info();
 	tplist_init ();
 	aplist_init ();
 	
