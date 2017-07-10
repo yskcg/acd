@@ -440,6 +440,7 @@ void get_ac_info()
 	FILE *ac_info_fp = NULL;
 
 	/*must dynamic get the ac info*/
+	system("ubus wait_for sysd");
 	sprintf(shell_cmd,"ubus call sysd sysinfo > %s",DEVICE_INFO);
 	system(shell_cmd);
 
@@ -525,7 +526,7 @@ void tplist_init(void)
 	if (file_size == 0){
 		/*no contents - write the default value for default template*/
 		strcpy(default_ssid,ac_info.product);
-		sprintf(buf, "name=default|id=0|ssid=%s|encrypt=none|key=|auth=0|type=0|disabled=0|hidden=0",default_ssid);
+		sprintf(buf, "name=default|id=0|ssid=%s|encrypt=none|key=|auth=0|type=0|disabled=0|hidden=0",strlen(default_ssid)>1?default_ssid:"morewifi");
 		file_write(TP_LIST_FILE, "id=0", buf);
 	}
 
