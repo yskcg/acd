@@ -452,6 +452,8 @@ try:
 		if(ac_info_fp != NULL){
 			read_size = fread(ac_infos,sizeof(ac_infos),1,ac_info_fp);
 			if(read_size <= 0 || strlen(ac_infos) <=1){
+				fclose(ac_info_fp);
+				unlink(DEVICE_INFO);
 				goto try;
 			}else{
 				json_parse(ac_infos,"sn",ac_info.sn);
@@ -481,11 +483,11 @@ try:
 					strcpy(ac_info.product,"BM150M");
 					ac_info.product[strlen(ac_info.product)] = '\0';
 				}
-		
+				
+				fclose(ac_info_fp);
+				unlink(DEVICE_INFO);
 				print_debug_log("%s %d ac_infos:%s sn:%s moid:%s dt:%d\n",__FUNCTION__,__LINE__,ac_infos,ac_info.sn,ac_info.moid,ac_info.dt);
-			}
-			fclose(ac_info_fp);
-			unlink(DEVICE_INFO);
+			}	
 		}
 	}
 }
