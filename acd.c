@@ -454,6 +454,7 @@ try:
 			if(read_size <= 0 || strlen(ac_infos) <=1){
 				fclose(ac_info_fp);
 				unlink(DEVICE_INFO);
+				sleep(5);
 				goto try;
 			}else{
 				json_parse(ac_infos,"sn",ac_info.sn);
