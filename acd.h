@@ -46,8 +46,8 @@ int send_data_to_ap (ap_status_entry * ap);
 int send_acinfo_to_ap (device_info * ac);
 int rcv_and_proc_data (char *data, int len, struct client *cl);
 int ap_online_proc (ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr);
-void aplist_entry_init(ap_status_entry aplist_node);
-void stalist_entry_init(sta_entry stalist_node);
+void aplist_entry_init(ap_status_entry *aplist_node);
+void stalist_entry_init(sta_entry *stalist_node);
 int stalist_hash_init(void);
 int aplist_hash_init(void);
 

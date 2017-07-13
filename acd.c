@@ -24,9 +24,10 @@ ap_list 	aplist;							//ap information list
 sta_list 	stalist;						//station information list
 tmplat_list *tplist 	= NULL;
 
-static ap_status_entry p_temp_ap_info;
-static sta_entry p_temp_sta_info;
 static device_info	 ac_info;
+static ap_status_entry apcfg_receive;
+static sta_entry  sta_status_info_receive;
+
 
 void gettime(struct timeval *tv)
 {
@@ -243,7 +244,6 @@ static void client_close(struct ustream *s)
 			}
 		}
 	}
-	print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 }
 
 static void client_notify_state(struct ustream *s)
@@ -851,19 +851,13 @@ int sproto_parser_cb(void *ud, const char *tagname, int type, int index, struct 
 	int r;
 	char val[256] = {0};
 	struct encode_ud *self = ud;
-	ap_status_entry *apcfg = NULL;
-	sta_entry  *sta_status_info = NULL;
-	
-	if(self->type == STA_INFO ){
-		sta_status_info = container_of (ud, sta_entry, ud);
-	}else{
-		apcfg = container_of (ud, ap_status_entry, ud);
-	}
+	ap_status_entry *apcfg =&apcfg_receive;
+	sta_entry  *sta_status_info = &sta_status_info_receive;
 
-	if (!(tagname && ud && (apcfg || sta_status_info))){
+	if (!(tagname && ud )){
 		return 0;
 	}
-	
+
 	switch (type) {
 		case SPROTO_TINTEGER:
 			if (strcasecmp (tagname, "type") == 0){
@@ -1031,7 +1025,6 @@ int ap_online_proc(ap_status_entry * ap, int sfd, struct sockaddr_in *localaddr)
 	ap->ud.type = AP_INFO;
 	ap->ud.session = SPROTO_REQUEST;
 	len = send_data_to_ap (ap);
-	print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 
 	return len;
 }
@@ -1044,22 +1037,13 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 	ecode_ud_spro 	ud;
 	char unpack[1024 * 6] = { 0 };
 	sta_entry *stal= NULL;
-	ap_status_entry *apl = NULL, *ap = NULL;
-	
-	
+	ap_status_entry *apl = NULL ;
+	ap_status_entry *ap = NULL;
+
 	print_debug_log ("[debug] [rcv] [data len:%d, fd:%d]\n", len, cl->s.fd.fd);
 	
-	//for ap
-	aplist_entry_init(p_temp_ap_info);
-	apl = &p_temp_ap_info;
-	apl->client_addr = cl;
-	apl->online = ON;
-	
-	//for station
-	stalist_entry_init(p_temp_sta_info);
-	stal = &p_temp_sta_info;
-
 	/*sproto header parse：type and session*/
+	memset(&ud,0,sizeof(ecode_ud_spro));
 	if ((headlen = sproto_header_parser(data, len, &ud, unpack)) <= 0){
 		print_debug_log ("[debug] [error] [sproto header parser failed!!]\n");
 		return -1;
@@ -1067,20 +1051,25 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 
 	print_debug_log("%s %d type:%d session:%d\n",__FUNCTION__,__LINE__,ud.type,ud.session);
 	if(ud.type == STA_INFO){
-		memcpy(&stal->ud,&ud,sizeof(ud));
-		print_debug_log("%s %d type:%d session:%d\n",__FUNCTION__,__LINE__,stal->ud.type,stal->ud.session);
+		//for station
+		stalist_entry_init(&sta_status_info_receive);
+		stal = &sta_status_info_receive;
+		memcpy(&(stal->ud),&ud,sizeof(ud));
+
 		/*sproto encoded data parse*/
-		if (sproto_parser (unpack, headlen, &(stal->ud)) <= 0){
+		if (sproto_parser (unpack, headlen, &ud) <= 0){
 			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
 		}
 	
 		stalist_entry_update(stal);
-	
+		
+		return ACd_STATUS_OK;
 	}else if (ud.type == AC_INFO){
-		memcpy(&stal->ud,&ud,sizeof(ud));
-		print_debug_log("%s %d type:%d session:%d\n",__FUNCTION__,__LINE__,stal->ud.type,stal->ud.session);
+		stalist_entry_init(&sta_status_info_receive);
+		stal = &sta_status_info_receive;
+		memcpy(&(stal->ud),&ud,sizeof(ud));
 		/*sproto encoded data parse*/
-		if (sproto_parser (unpack, headlen, &(stal->ud)) <= 0){
+		if (sproto_parser (unpack, headlen, &ud) <= 0){
 			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
 		}
 
@@ -1091,17 +1080,82 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 		ac_info.ud.ok = RESPONSE_OK;
 		ac_info.ud.session = SPROTO_RESPONSE;
 
-		if ((slen = send_acinfo_to_ap (&ac_info)) <= 0){
-			goto error;
-		}
+		send_acinfo_to_ap (&ac_info);
 
-	}else{
-		memcpy(&apl->ud,&ud,sizeof(ud));
-		if (sproto_parser (unpack, headlen, &(apl->ud)) <= 0){
+		return ACd_STATUS_OK;
+	}else if (ud.type == AP_CMD){
+		aplist_entry_init(&apcfg_receive);
+		apl = &apcfg_receive;
+		apl->client_addr = cl;
+		memcpy(&(apl->ud),&ud,sizeof(ud));
+		//print_debug_log("%s %d model:%s mac:%02x:%02x:%02x:%02x:%02x:%02x sn:%s \n",__FUNCTION__,__LINE__,\
+				apl->apinfo.model,apl->apinfo.apmac[0],apl->apinfo.apmac[1],apl->apinfo.apmac[2],apl->apinfo.apmac[3],apl->apinfo.apmac[4],apl->apinfo.apmac[5],\
+				apl->apinfo.sn);
+		if (sproto_parser (unpack, headlen, &(ud)) <= 0){
 			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
 			goto error;
 		}
-		
+
+		/*after decode the sproto data ,find the hash node*/
+		if ( apl->apinfo.apmac != NULL ){
+			ap = aplist_entry_find(&aplist.hash[aplist_entry_hash(apl->apinfo.apmac)],apl->apinfo.apmac);
+			
+			if(ap && ud.session == SPROTO_RESPONSE && ud.ok == RESPONSE_OK){
+				free_mem(ap);
+				return ACd_STATUS_REBOOT_OK;	
+			}
+		}
+	
+		//print_debug_log("%s %d model:%s mac:%02x:%02x:%02x:%02x:%02x:%02x sn:%s \n",__FUNCTION__,__LINE__,\
+				apl->apinfo.model,apl->apinfo.apmac[0],apl->apinfo.apmac[1],apl->apinfo.apmac[2],apl->apinfo.apmac[3],apl->apinfo.apmac[4],apl->apinfo.apmac[5],\
+				apl->apinfo.sn);
+		return ACd_STATUS_OK;
+	}else if(ud.type == AP_INFO ){
+		/*AP_INFO(AC config the AP) don't handle if OK*/
+		if (ud.session != SPROTO_RESPONSE){
+			return -2;
+		}
+
+		aplist_entry_init(&apcfg_receive);
+		apl = &apcfg_receive;
+		apl->client_addr = cl;
+		memcpy(&(apl->ud),&ud,sizeof(ud));
+
+		if (sproto_parser (unpack, headlen, &(ud)) <= 0){
+			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
+			goto error;
+		}
+
+		if (ud.ok == RESPONSE_ERROR){
+			/*after decode the sproto data ,we creat/update hash list*/
+			if ( apl->apinfo.apmac != NULL ){
+				ap = aplist_entry_find(&aplist.hash[aplist_entry_hash(apl->apinfo.apmac)],apl->apinfo.apmac);
+				
+				if(ap){
+					ap->ud.session = SPROTO_REQUEST;
+					ap->ud.type = AP_INFO;
+					slen = send_data_to_ap (ap);
+					return ACd_STATUS_OK;	
+				}
+			}
+
+		}else{
+			print_debug_log ("[debug] <receive> [response pack]\n");
+			return ACd_STATUS_OK;
+		}
+	}else if(ud.type == AP_STATUS){/*AP_STATUS->ap send the heart beat to ac*/
+		//for ap online and update the time
+		aplist_entry_init(&apcfg_receive);
+		apl = &apcfg_receive;
+		apl->client_addr = cl;
+		memcpy(&(apl->ud),&ud,sizeof(ud));
+		apl->online = ON;
+
+		if (sproto_parser (unpack, headlen, &(ud)) <= 0){
+			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
+			goto error;
+		}
+
 		/*after decode the sproto data ,we creat/update hash list*/
 		if ( apl->apinfo.apmac != NULL ){
 			/*for_each to find hash node*/
@@ -1124,40 +1178,25 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 			}else{
 				return -2;
 			}
+			
+			if (status ==AC_NEW_HASH_NODE  && ap->ud.session == SPROTO_REQUEST){
+				return ap_online_proc (ap, cl->s.fd.fd, &cl->localaddr);
+			}else{
+				ap->ud.session = SPROTO_RESPONSE;
+				ap->ud.ok = RESPONSE_OK;
+				slen = send_data_to_ap (ap);
+				
+				return ACd_STATUS_OK;
+			}
 		}
-
-		if (ap->ud.session == SPROTO_RESPONSE && ap->ud.ok == RESPONSE_OK){
-			ap->ud.ok = 0;
-			//if (ap->ud.type == AP_CMD){
-				//free_mem(ap);
-				//return ACd_STATUS_REBOOT_OK;
-			//}
-			print_debug_log ("[debug] <receive> [response pack]\n");
-
-			return ACd_STATUS_OK;
-		}else if (ap->ud.session == SPROTO_RESPONSE && ap->ud.ok == RESPONSE_ERROR){
-			ap->ud.session = SPROTO_REQUEST;
-			slen = send_data_to_ap (ap);
-
-			return ACd_STATUS_OK;
-		}else if (status ==AC_NEW_HASH_NODE  && ap->ud.session == SPROTO_REQUEST){
-			return ap_online_proc (ap, cl->s.fd.fd, &cl->localaddr);
-		}
-		
-		ap->ud.session = SPROTO_RESPONSE;
-		ap->ud.ok = RESPONSE_OK;
-		slen = send_data_to_ap (ap);
-		
-		return ACd_STATUS_OK;
-
-error:
-		ap->ud.session = SPROTO_RESPONSE;
-		ap->ud.ok = RESPONSE_ERROR;
-		slen = send_data_to_ap (ap);
-		print_debug_log ("[debug] <send> [data len:%d]\n", slen);
-
-		return -1;
 	}
+error:
+	ap->ud.session = SPROTO_RESPONSE;
+	ap->ud.ok = RESPONSE_ERROR;
+	slen = send_data_to_ap (ap);
+	print_debug_log ("[debug] <send> [data len:%d]\n", slen);
+
+	return -1;
 }
 
 int prepare_tmplist_data(ap_status_entry * ap)
@@ -1864,7 +1903,6 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		if(type_changed){
 			tp->tmplate_info.tmplat_ssid_info.type = type;
 		}
-		print_debug_log("%s %d\n",__FUNCTION__,__LINE__);
 	}
 
 	if (data_range_in(auth,0,1) == 0){
@@ -2322,7 +2360,6 @@ static int ubus_proc_apdel(struct ubus_context *ctx, struct ubus_object *obj,
 			if (strcmp(ap->apinfo.sn ,sn) != 0){
 				ap = NULL;
 				blobmsg_add_string (&b, "msg", "the sn not matched the mac address!");
-				print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 			}
 		}
 		
@@ -2397,12 +2434,10 @@ static int ubus_proc_apcmd(struct ubus_context *ctx, struct ubus_object *obj,
 			if (strcmp(ap->apinfo.sn ,sn) != 0){
 				ap = NULL;
 				blobmsg_add_string (&b, "msg", "the sn not matched the mac address!");
-				print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 			}
 		}
 		
 		if (ap == NULL){
-			print_debug_log("%s,%d\n",__FUNCTION__,__LINE__);
 			blobmsg_add_u32 (&b, "code", 1);
 			goto error;
 		}
@@ -2553,14 +2588,14 @@ int stalist_hash_init(void)
 	return 0;
 }
 
-void aplist_entry_init(ap_status_entry aplist_node)
+void aplist_entry_init(ap_status_entry *aplist_node)
 {
-	memset(&aplist_node,0,sizeof(ap_status_entry));
+	memset(aplist_node,0,sizeof(ap_status_entry));
 }
 
-void stalist_entry_init(sta_entry stalist_node)
+void stalist_entry_init(sta_entry *stalist_node)
 {
-	memset(&stalist_node,0,sizeof(stalist_node));
+	memset(stalist_node,0,sizeof(sta_entry));
 }
 
 void acd_init(void)
@@ -2588,7 +2623,6 @@ void acd_init(void)
 
 	aplist_hash_init();
 	stalist_hash_init();
-	aplist_entry_init(p_temp_ap_info);
 	get_ac_info();
 	tplist_init ();
 	aplist_init ();

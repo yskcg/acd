@@ -40,6 +40,7 @@ info 2 {
 	}
 	response {
 		ok 				0 : boolean
+		mac				1 : string
 	}
 }
 
@@ -51,6 +52,7 @@ cmd 3 {
 	}
 	response {
 		ok 				0 : boolean
+		mac				1 : string
 	}
 }
 
