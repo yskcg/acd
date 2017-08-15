@@ -415,7 +415,7 @@ void aplist_init(void)
 				if (ap->apinfo.id & (0x01<<i)){
 					if ((tp = template_find_by_id(i)) != NULL){
 						memcpy(&(ap->apinfo.wifi_info.ssid_info[i]),&(tp->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
-					}else{
+					}else if(i>2){ //default band three template
 						clear_bit(ap->apinfo.id,i);
 					}
 				}
@@ -427,7 +427,6 @@ void aplist_init(void)
 	}
 	
 	fclose(fp);
-
 	return ;
 	
 }
@@ -493,19 +492,66 @@ try:
 	}
 }
 
+void tplist_insert(char *buf)
+{
+	tmplat_list tp;
+	char key[32] = {'\0'};
+	char value[128] = {'\0'};
+	char *optstr;
+	char *p_buf = NULL;
+	char *p_key_value = NULL;
+
+	/*get the mac address of ap*/
+	if (strlen(buf) <=1 || buf[0] ==10){ //排除文件换行无内容情况
+		return;
+	}else{
+		p_buf = buf;
+		p_key_value = strtok(p_buf,"|");
+		memset (&tp, '\0', sizeof (tmplat_list));
+		while(p_key_value){
+			memset(key,'\0',sizeof(key));
+			memset(value ,'\0',sizeof(value));
+			optstr = strstr (p_key_value, "=");
+			strncpy (key, p_key_value, optstr - p_key_value);
+			strncpy (value, optstr + 1,strlen(optstr)-1);
+			/*fill data in the double link list node*/
+			if (strcasecmp(key, "name") == 0){
+				strcpy(tp.tmplate_info.tpname,value);
+			}else if (strcasecmp (key, "id") == 0){
+				tp.tmplate_info.id = (char )atoi(value);
+			}else if (strcasecmp (key, "ssid") == 0){
+				strcpy(tp.tmplate_info.tmplat_ssid_info.ssid,value);
+			}else if (strcasecmp (key, "encrypt") == 0){
+				strcpy(tp.tmplate_info.tmplat_ssid_info.encrypt,value);
+			}else if (strcasecmp (key, "key") == 0){
+				strcpy(tp.tmplate_info.tmplat_ssid_info.key,value);
+				tp.tmplate_info.tmplat_ssid_info.key[strlen(value)-1] = '\0';
+			}else if (strcasecmp (key, "auth") == 0){
+				tp.tmplate_info.tmplat_ssid_info.auth = (char )atoi(value);
+			}else if (strcasecmp (key, "type") == 0){
+				tp.tmplate_info.tmplat_ssid_info.type = (char )atoi(value);
+			}else if (strcasecmp (key, "disabled") == 0){
+				tp.tmplate_info.tmplat_ssid_info.disabled = (char )atoi(value);
+			}else if (strcasecmp (key, "hidden") == 0){
+				tp.tmplate_info.tmplat_ssid_info.hidden = (char )atoi(value);
+			}
+
+			p_key_value = strtok (NULL, "|");
+		}
+
+		template_insert_by_id (&tp);
+		memset (&tp, '\0', sizeof (tmplat_list));
+	}
+	memset(buf,'\0',sizeof(512));
+}
+
 void tplist_init(void)
 {
 
 	int file_size;
-	tmplat_list tp;
 	char buf[512];
-	char key[32] = {'\0'};
-	char value[128] = {'\0'};
 	char default_ssid[32] = {'\0'}; 
-	char *optstr;
 	FILE *fp =NULL;
-	char *p_buf = NULL;
-	char *p_key_value = NULL;
 	
 	/*1:read the content from the tplist*/
 	if (access(TP_LIST_FILE, F_OK) != 0){
@@ -531,61 +577,32 @@ void tplist_init(void)
 	if (file_size == 0){
 		/*no contents - write the default value for default template*/
 		strcpy(default_ssid,ac_info.product);
-		sprintf(buf, "name=default|id=0|ssid=%s|encrypt=none|key=|auth=0|type=0|disabled=0|hidden=0",strlen(default_ssid)>1?default_ssid:"morewifi");
+		sprintf(buf, "name=default|id=0|ssid=%s|encrypt=none|key=|auth=1|type=2|disabled=1|hidden=0",strlen(default_ssid)>1?default_ssid:"morewifi");
 		file_write(TP_LIST_FILE, "id=0", buf);
-	}
-
-	fseek(fp,0,SEEK_SET);
-	/*get the tplist file content*/
-	do{
-		/*get the mac address of ap*/
-		if (strlen(buf) <=1 || buf[0] ==10){ //排除文件换行无内容情况
-			continue;
-		}else{
-			p_buf = buf;
-			p_key_value = strtok(p_buf,"|");
-			memset (&tp, '\0', sizeof (tmplat_list));
-			while(p_key_value){
-				memset(key,'\0',sizeof(key));
-				memset(value ,'\0',sizeof(value));
-				optstr = strstr (p_key_value, "=");
-				strncpy (key, p_key_value, optstr - p_key_value);
-				strncpy (value, optstr + 1,strlen(optstr)-1);
-				/*fill data in the double link list node*/
-				if (strcasecmp(key, "name") == 0){
-					strcpy(tp.tmplate_info.tpname,value);
-				}else if (strcasecmp (key, "id") == 0){
-					tp.tmplate_info.id = (char )atoi(value);
-				}else if (strcasecmp (key, "ssid") == 0){
-					strcpy(tp.tmplate_info.tmplat_ssid_info.ssid,value);
-				}else if (strcasecmp (key, "encrypt") == 0){
-					strcpy(tp.tmplate_info.tmplat_ssid_info.encrypt,value);
-				}else if (strcasecmp (key, "key") == 0){
-					strcpy(tp.tmplate_info.tmplat_ssid_info.key,value);
-					tp.tmplate_info.tmplat_ssid_info.key[strlen(value)-1] = '\0';
-				}else if (strcasecmp (key, "auth") == 0){
-					tp.tmplate_info.tmplat_ssid_info.auth = (char )atoi(value);
-				}else if (strcasecmp (key, "type") == 0){
-					tp.tmplate_info.tmplat_ssid_info.type = (char )atoi(value);
-				}else if (strcasecmp (key, "disabled") == 0){
-					tp.tmplate_info.tmplat_ssid_info.disabled = (char )atoi(value);
-				}else if (strcasecmp (key, "hidden") == 0){
-					tp.tmplate_info.tmplat_ssid_info.hidden = (char )atoi(value);
-				}
-
-				p_key_value = strtok (NULL, "|");
-			}
-
-			template_insert_by_id (&tp);
-			memset (&tp, '\0', sizeof (tmplat_list));
-		}
+		tplist_insert(buf);
+		memset(buf,0,sizeof(buf));
+		sprintf(buf, "name=default|id=1|ssid=%s|encrypt=none|key=|auth=0|type=0|disabled=0|hidden=0",strlen(default_ssid)>1?default_ssid:"morewifi");
+		file_write(TP_LIST_FILE, "id=1", buf);
+		tplist_insert(buf);
+		memset(buf,0,sizeof(buf));
+		sprintf(buf, "name=default|id=2|ssid=%s|encrypt=none|key=|auth=0|type=1|disabled=0|hidden=0",strlen(default_ssid)>1?default_ssid:"morewifi");
+		file_write(TP_LIST_FILE, "id=2", buf);
+		tplist_insert(buf);
+	}else{
+		/*get the aplist file content*/
+		fseek(fp,0,SEEK_SET);
 		memset(buf,'\0',sizeof(512));
-	}while((fgets(buf,512,fp))!=NULL);
+		/*get the tplist file content*/
+		while((fgets(buf,512,fp))!=NULL){
+			tplist_insert(buf);
+		}
+	}
 
 	fclose(fp);
 
 	return;
 }
+
 
 
 int memcat(char *res, char *buf, int slen, int len)
@@ -776,6 +793,7 @@ void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 		return;
 	}
 
+	print_debug_log("[debug:][%s] [tagname]:%s [value]:%s \n",__FUNCTION__,tagname,value);
 	if (strcasecmp (tagname, "hver") == 0){
 		memset(apcfg->apinfo.hver,'\0',sizeof(apcfg->apinfo.hver));
 		strncpy (apcfg->apinfo.hver, value, len);
@@ -1448,7 +1466,6 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	arr = blobmsg_open_array (buf, "id");
 	for ( i = 0;i<=AP_MAX_BINDID;i++){
 		if (ap->apinfo.id & (0x01<<i)){
-			//print_debug_log("%s %d i:%d apinfo:%d\n",__FUNCTION__,__LINE__,i,ap->apinfo.id);
 			blobmsg_add_u32 (buf, NULL, i);
 		}
 	}
