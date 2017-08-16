@@ -1351,14 +1351,14 @@ int proc_template_edit(tmplat_list *tpcfg, struct ubus_request_data *req)
 				memcpy(&(ap->apinfo.wifi_info.ssid_info[tpcfg->tmplate_info.id]),&(tpcfg->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
 				change =true;
 			}
-			
-			if (change){
-				ap->ud.type = AP_INFO;
-				ap->ud.session = SPROTO_REQUEST;
-				send_data_to_ap (ap);
-				change = false;
-			}
 		}
+	}
+
+	if (change){
+		ap->ud.type = AP_INFO;
+		ap->ud.session = SPROTO_REQUEST;
+		send_data_to_ap (ap);
+		change = false;
 	}
 
 	blobmsg_add_u32 (&b, "code", 0);
