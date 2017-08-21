@@ -542,7 +542,6 @@ void tplist_insert(char *buf)
 		template_insert_by_id (&tp);
 		memset (&tp, '\0', sizeof (tmplat_list));
 	}
-	memset(buf,'\0',sizeof(512));
 }
 
 void tplist_init(void)
@@ -595,6 +594,7 @@ void tplist_init(void)
 		/*get the tplist file content*/
 		while((fgets(buf,512,fp))!=NULL){
 			tplist_insert(buf);
+			memset(buf,'\0',sizeof(512));
 		}
 	}
 
