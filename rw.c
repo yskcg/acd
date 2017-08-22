@@ -21,7 +21,7 @@ int file_write(char *fname, char *index, char *value)
 		
 		/*删除空白行*/
 		memset(shell_cmd,'\0',sizeof(shell_cmd));
-		sprintf(shell_cmd,"sed -i '/^\s*$/d' %s ;sync",fname);
+		sprintf(shell_cmd,"sed -i '/^\s*$/d' %s",fname);
 		system(shell_cmd);
 	}
 	

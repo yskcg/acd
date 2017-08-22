@@ -221,7 +221,7 @@ static void client_read_cb(struct ustream *s, int bytes)
 
 	if (s->w.data_bytes > 256 && !ustream_read_blocked(s)) {
 		print_debug_log ("[debug] [Block read, bytes: %d]\n", s->w.data_bytes);
-		ustream_set_read_blocked (s, true);
+		ustream_set_read_blocked (s, TRUE);
 	}
 }
 
@@ -296,7 +296,7 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
 	/*set the sock reuse*/
 	setsockopt(sfd,SOL_SOCKET,SO_REUSEADDR,&so_reuseaddr,sizeof(so_reuseaddr));
 
-	cl->s.stream.string_data = true;
+	cl->s.stream.string_data = TRUE;
 	cl->s.stream.notify_read = client_read_cb;
 	cl->s.stream.notify_state = client_notify_state;
 
@@ -329,21 +329,96 @@ int is_digit_string(char * string)
 	return res;
 }
 
+void aplist_insert(char *buf)
+{
+	int len =0;
+	int i;
+	int offset = 0;
+	char temp_buf[64] = {'\0'};
+	char temp_buf2[512] = {'\0'};
+	char key[32] = {'\0'};
+	char value[128] = {'\0'};
+	unsigned char mac[6] = {0};
+	char *optstr;
+	char *p_key_value = NULL;
+	ap_status_entry *ap = NULL;
+	tmplat_list *tp = NULL;
+
+	/*get the mac address of ap*/
+	if (strlen(buf) <=1 || buf[0] ==10){ //排除文件换行无内容情况
+		return;
+	}else{
+		len = strlen(buf);
+		p_key_value = strstr(buf,"|");
+		offset = len -strlen(p_key_value);
+		strncpy(temp_buf,buf,offset);
+		
+		while(strlen(temp_buf) >0){			
+			memset(key,'\0',sizeof(key));
+			memset(value ,'\0',sizeof(value));
+			optstr = strstr (temp_buf, "=");
+			strncpy (key, temp_buf, optstr - temp_buf);
+			strncpy (value, optstr + 1,strlen(optstr)-1);
+			
+			/*creat or find the hash node*/
+			if ((strcasecmp(key,"mac") == 0)&&strlen(value) > 0){
+				/*dele the ':' and make string to int*/
+				mac_string_to_value((unsigned char *)value,mac);
+				/*for_each to find hash node*/
+				ap = aplist_entry_insert(mac);
+			}
+			/*fill data in the hash node*/
+			if ( ap ){
+				fill_data (ap, key, value, strlen (value));
+			}else{
+				break;
+			}
+
+			memset(temp_buf,0,sizeof(temp_buf));
+			memset(temp_buf2,0,sizeof(temp_buf2));
+			if(! p_key_value ){
+				break;
+			}
+			p_key_value = p_key_value +1;
+			len = strlen(p_key_value);
+			strncpy(temp_buf2,p_key_value,len);
+			p_key_value = strstr(p_key_value,"|");
+
+			if(p_key_value){
+				offset = len -strlen(p_key_value);
+				strncpy(temp_buf,temp_buf2,offset);
+			}else{
+				strncpy(temp_buf,temp_buf2,len);
+			}		
+		}
+
+		/*find the aplist id <-> tmplate id,if id not exist,use default tmplate,else use tmplate id*/
+		if (ap == NULL){
+			return;
+		}
+
+		ap->status = AC_INIT_OFFLINE;    //init the aplist  set the status to zero
+		if (ap->apinfo.id == 0){
+			ap->apinfo.id = DEFAULT_TMPLATE_ID_MAP;
+		}
+
+		for ( i = 0;i<=AP_MAX_BINDID;i++){
+			if (ap->apinfo.id & (0x01<<i)){
+				if ((tp = template_find_by_id(i)) != NULL){
+					memcpy(&(ap->apinfo.wifi_info.ssid_info[i]),&(tp->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
+				}else if(i>2){ //default band three template
+					clear_bit(ap->apinfo.id,i);
+				}
+			}
+		}
+	}
+}
+
 void aplist_init(void)
 {
-	
 	int file_size;
-	int i;
 	char buf[512] = {'\0'};
-	char *p_buf = NULL;
-	char key[32] = {'\0'};
-	unsigned char mac[6] = {0};
-	char value[128] = {'\0'};
-	char *p_key_value = NULL;
-	char *optstr = NULL;
-	tmplat_list *tp = NULL;
 	FILE *fp =NULL;
-	ap_status_entry *ap = NULL;
 	
 	/*1:read the content from the aplist*/
 	
@@ -373,57 +448,8 @@ void aplist_init(void)
 	fseek(fp,0,SEEK_SET);
 	/*get the aplist file content*/
 	while((fgets(buf,512,fp))!=NULL){
-		/*get the mac address of ap*/
-		if (!(strlen(buf) <=1 && buf[0] ==10)){ //排除文件换行无内容情况
-			p_buf = buf;
-			p_key_value = strtok(p_buf,"|");
-
-			while(p_key_value){			
-				memset(key,'\0',sizeof(key));
-				memset(value ,'\0',sizeof(value));
-				optstr = strstr (p_key_value, "=");
-				strncpy (key, p_key_value, optstr - p_key_value);
-				strncpy (value, optstr + 1,strlen(optstr)-1);
-				
-				/*creat or find the hash node*/
-				if ((strcasecmp(key,"mac") == 0)&&strlen(value) > 0){
-					/*dele the ':' and make string to int*/
-					mac_string_to_value((unsigned char *)value,mac);
-					/*for_each to find hash node*/
-					ap = aplist_entry_insert(mac);
-				}
-				/*fill data in the hash node*/
-				if ( ap ){
-					ap->status = AC_INIT_OFFLINE;    //init the aplist  set the status to zero
-					fill_data (ap, key, value, strlen (value));
-				}else{
-					break;
-				}
-				p_key_value = strtok (NULL, "|");
-			}
-
-			/*find the aplist id <-> tmplate id,if id not exist,use default tmplate,else use tmplate id*/
-			if (ap == NULL){
-				break;
-			}
-
-			if (ap->apinfo.id == 0){
-				ap->apinfo.id = DEFAULT_TMPLATE_ID_MAP;
-			}
-
-			for ( i = 0;i<=AP_MAX_BINDID;i++){
-				if (ap->apinfo.id & (0x01<<i)){
-					if ((tp = template_find_by_id(i)) != NULL){
-						memcpy(&(ap->apinfo.wifi_info.ssid_info[i]),&(tp->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
-					}else if(i>2){ //default band three template
-						clear_bit(ap->apinfo.id,i);
-					}
-				}
-			}
-
-			memset(buf,'\0',sizeof(buf));
-			ap = NULL ;
-		}	
+		aplist_insert(buf);
+		memset(buf,0,sizeof(buf));
 	}
 	
 	fclose(fp);
@@ -495,24 +521,30 @@ try:
 void tplist_insert(char *buf)
 {
 	tmplat_list tp;
+	int len =0;
+	int offset = 0;
+	char temp_buf[64] = {'\0'};
+	char temp_buf2[512] = {'\0'};
 	char key[32] = {'\0'};
 	char value[128] = {'\0'};
 	char *optstr;
-	char *p_buf = NULL;
 	char *p_key_value = NULL;
 
 	/*get the mac address of ap*/
 	if (strlen(buf) <=1 || buf[0] ==10){ //排除文件换行无内容情况
 		return;
 	}else{
-		p_buf = buf;
-		p_key_value = strtok(p_buf,"|");
+		len = strlen(buf);
+		p_key_value = strstr(buf,"|");
+		offset = len -strlen(p_key_value);
+		strncpy(temp_buf,buf,offset);
 		memset (&tp, '\0', sizeof (tmplat_list));
-		while(p_key_value){
+
+		while(strlen(temp_buf) >0){
 			memset(key,'\0',sizeof(key));
 			memset(value ,'\0',sizeof(value));
-			optstr = strstr (p_key_value, "=");
-			strncpy (key, p_key_value, optstr - p_key_value);
+			optstr = strstr (temp_buf, "=");
+			strncpy (key, temp_buf, optstr - temp_buf);
 			strncpy (value, optstr + 1,strlen(optstr)-1);
 			/*fill data in the double link list node*/
 			if (strcasecmp(key, "name") == 0){
@@ -536,7 +568,22 @@ void tplist_insert(char *buf)
 				tp.tmplate_info.tmplat_ssid_info.hidden = (char )atoi(value);
 			}
 
-			p_key_value = strtok (NULL, "|");
+			memset(temp_buf,0,sizeof(temp_buf));
+			memset(temp_buf2,0,sizeof(temp_buf2));
+			if(! p_key_value ){
+				break;
+			}
+			p_key_value = p_key_value +1;
+			len = strlen(p_key_value);
+			strncpy(temp_buf2,p_key_value,len);
+			p_key_value = strstr(p_key_value,"|");
+
+			if(p_key_value){
+				offset = len -strlen(p_key_value);
+				strncpy(temp_buf,temp_buf2,offset);
+			}else{
+				strncpy(temp_buf,temp_buf2,len);
+			}
 		}
 
 		template_insert_by_id (&tp);
@@ -573,6 +620,7 @@ void tplist_init(void)
 	fseek(fp, 0, SEEK_END);
 	file_size = ftell(fp);
 	memset(buf,'\0',sizeof(512));
+
 	if (file_size == 0){
 		/*no contents - write the default value for default template*/
 		strcpy(default_ssid,ac_info.product);
@@ -1334,12 +1382,11 @@ void print_debug_log(const char *form ,...)
 
 int proc_template_edit(tmplat_list *tpcfg, struct ubus_request_data *req)
 {
-	char change = false;
+	char change = FALSE;
 	int  i;
 	ap_status_entry *ap = NULL;
 
 	blob_buf_init (&b, 0);
-	
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		if (hlist_empty(&(aplist.hash[i]))){
@@ -1349,16 +1396,15 @@ int proc_template_edit(tmplat_list *tpcfg, struct ubus_request_data *req)
 			if (((0x01 << tpcfg->tmplate_info.id) & ap->apinfo.id)){
 				memset(&(ap->apinfo.wifi_info.ssid_info[tpcfg->tmplate_info.id]),'\0',sizeof(ap_ssid_info));
 				memcpy(&(ap->apinfo.wifi_info.ssid_info[tpcfg->tmplate_info.id]),&(tpcfg->tmplate_info.tmplat_ssid_info),sizeof(ap_ssid_info));
-				change =true;
+				change = TRUE;
+			}
+			if (change == TRUE){
+				ap->ud.type = AP_INFO;
+				ap->ud.session = SPROTO_REQUEST;
+				send_data_to_ap (ap);
+				change = FALSE;
 			}
 		}
-	}
-
-	if (change){
-		ap->ud.type = AP_INFO;
-		ap->ud.session = SPROTO_REQUEST;
-		send_data_to_ap (ap);
-		change = false;
 	}
 
 	blobmsg_add_u32 (&b, "code", 0);
@@ -1813,7 +1859,7 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	char disabled_changed = 0;
 	char type_changed = 0;
 	char auth_changed = 0;
-	char edit_temp0_flag = false;
+	char edit_temp0_flag = FALSE;
 	char index[64] = {0};
 	char res[1024] = {0};
 	char *ssid = NULL;
@@ -1874,7 +1920,7 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	}
 	
 	/*the default template can't be modified by user*/
-	if ( ( id == 0  && edit_temp0_flag== false) || (tp = template_find_by_id (id)) == NULL){
+	if ( ( id == 0  && edit_temp0_flag== TRUE) || (tp = template_find_by_id (id)) == NULL){
 		blobmsg_add_string (&b, "msg", "template id invalid");
 		goto error;
 	}
@@ -1960,7 +2006,6 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 		}
 	}
 	
-
 	sprintf (index, "id=%d", id);
 	format_tmp_cfg (tp, res);
 	file_write(TP_LIST_FILE, index, res);
@@ -2060,7 +2105,7 @@ int templatedel_cb(struct blob_attr **tb, struct ubus_request_data *req)
 					ap->apinfo.apmac[4]&0xff,\
 					ap->apinfo.apmac[5]&0xff);
 				file_write(AP_LIST_FILE, index, res);
-				change = false;
+				change = FALSE;
 			}
 		}
 	}
