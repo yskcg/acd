@@ -1920,7 +1920,7 @@ int templatedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	}
 	
 	/*the default template can't be modified by user*/
-	if ( ( id == 0  && edit_temp0_flag== TRUE) || (tp = template_find_by_id (id)) == NULL){
+	if ( ( id == 0  && edit_temp0_flag== FALSE) || (tp = template_find_by_id (id)) == NULL){
 		blobmsg_add_string (&b, "msg", "template id invalid");
 		goto error;
 	}
