@@ -593,7 +593,7 @@ void tplist_insert(char *buf)
 
 void tplist_init(void)
 {
-
+	int template_numbers = 0;
 	int file_size;
 	char buf[512];
 	char default_ssid[32] = {'\0'}; 
@@ -619,9 +619,17 @@ void tplist_init(void)
 
 	fseek(fp, 0, SEEK_END);
 	file_size = ftell(fp);
+	fseek(fp,0,SEEK_SET);
 	memset(buf,'\0',sizeof(512));
 
-	if (file_size == 0){
+	/*get the template numbers*/
+	while((fgets(buf,512,fp))!=NULL){
+		template_numbers = template_numbers +1;
+		memset(buf,'\0',sizeof(512));
+	}
+
+	if (file_size == 0 || template_numbers !=3 ){
+		memset(buf,0,sizeof(buf));
 		/*no contents - write the default value for default template*/
 		strcpy(default_ssid,ac_info.product);
 		sprintf(buf, "name=default|id=0|ssid=%s|encrypt=none|key=|auth=1|type=2|disabled=1|hidden=0",strlen(default_ssid)>1?default_ssid:"morewifi");
