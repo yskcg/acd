@@ -1754,7 +1754,7 @@ int apedit_cb(struct blob_attr **tb, struct ubus_request_data *req)
 	}
 
 	if (txpower != NULL && txpower[0] != 0){
-		if (atoi(txpower) > 20 || atoi(txpower) < 1){
+		if (atoi(txpower) > 23 || atoi(txpower) < 1){
 			blobmsg_add_string (&b, "msg", "txpower invalid!");
 			goto error;
 		}
