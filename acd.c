@@ -461,7 +461,7 @@ void get_ac_info()
 {
 	int read_size = 0;
 	char shell_cmd [128] = {0};
-	char ac_infos[128] = {0};
+	char ac_infos[256] = {0};
 	FILE *ac_info_fp = NULL;
 
 	/*must dynamic get the ac info*/
