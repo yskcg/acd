@@ -476,7 +476,8 @@ try:
 		ac_info_fp = fopen(DEVICE_INFO,"r");
 		if(ac_info_fp != NULL){
 			read_size = fread(ac_infos,sizeof(ac_infos),1,ac_info_fp);
-			if(read_size <= 0 || strlen(ac_infos) <=1){
+
+			if(read_size <= 0  && strlen(ac_infos) <=1){
 				fclose(ac_info_fp);
 				unlink(DEVICE_INFO);
 				sleep(5);
