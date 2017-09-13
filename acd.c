@@ -486,34 +486,10 @@ try:
 				json_parse(ac_infos,"sn",ac_info.sn);
 				json_parse(ac_infos,"moid",ac_info.moid);
 				json_parse(ac_infos,"dt",&(ac_info.dt));
-
-				/*get the ac product name*/
-				if(ac_info.dt == 5){
-					strcpy(ac_info.product,"MW1000X");
-					ac_info.product[strlen(ac_info.product)] = '\0';
-				}else if(ac_info.dt == 6){
-					strcpy(ac_info.product,"MW2000E");
-					ac_info.product[strlen(ac_info.product)] = '\0';
-				}else if(ac_info.dt == 9){
-					strcpy(ac_info.product,"MW500X");
-					ac_info.product[strlen(ac_info.product)] = '\0';
-				}else if(ac_info.dt == 11){
-					strcpy(ac_info.product,"MW3000EF");
-					ac_info.product[strlen(ac_info.product)] = '\0';
-				}else if(ac_info.dt == 12){
-					strcpy(ac_info.product,"MW300M");
-					ac_info.product[strlen(ac_info.product)] = '\0';
-				}else if(ac_info.dt == 16){
-					strcpy(ac_info.product,"MW150M");
-					ac_info.product[strlen(ac_info.product)] = '\0';
-				}else if(ac_info.dt == 22){
-					strcpy(ac_info.product,"BM150M");
-					ac_info.product[strlen(ac_info.product)] = '\0';
-				}
-				
+				json_parse(ac_infos,"product",ac_info.product);
 				fclose(ac_info_fp);
 				unlink(DEVICE_INFO);
-				print_debug_log("%s %d ac_infos:%s sn:%s moid:%s dt:%d\n",__FUNCTION__,__LINE__,ac_infos,ac_info.sn,ac_info.moid,ac_info.dt);
+				print_debug_log("%s %d ac_infos:%s sn:%s moid:%s dt:%d product:%s\n",__FUNCTION__,__LINE__,ac_infos,ac_info.sn,ac_info.moid,ac_info.dt,ac_info.product);
 			}	
 		}
 	}
