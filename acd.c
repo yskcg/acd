@@ -534,7 +534,6 @@ void tplist_insert(char *buf)
 				strcpy(tp.tmplate_info.tmplat_ssid_info.encrypt,value);
 			}else if (strcasecmp (key, "key") == 0){
 				strcpy(tp.tmplate_info.tmplat_ssid_info.key,value);
-				tp.tmplate_info.tmplat_ssid_info.key[strlen(value)-1] = '\0';
 			}else if (strcasecmp (key, "auth") == 0){
 				tp.tmplate_info.tmplat_ssid_info.auth = (char )atoi(value);
 			}else if (strcasecmp (key, "type") == 0){
