@@ -398,8 +398,8 @@ void aplist_insert(char *buf)
 		}
 
 		ap->status = AC_INIT_OFFLINE;    //init the aplist  set the status to zero
-		if (ap->apinfo.id == 0){
-			ap->apinfo.id = DEFAULT_TMPLATE_ID_MAP;
+		if (ap->apinfo.id != DEFAULT_TMPLATE_ID_MAP){
+			ap->apinfo.id = DEFAULT_TMPLATE_ID_MAP; //default band three template
 		}
 
 		for ( i = 0;i<=AP_MAX_BINDID;i++){
