@@ -10,7 +10,7 @@ int ipset_add(u8_t *addr,char *name_entry)
 		return -1;
 	}
 
-	sprintf(shell_cmd,"ipset add WhiteList_wifi_src %2x:%2x:%2x:%2x:%2x:%2x\n",addr[0],addr[1],addr[2],addr[3],addr[4],addr[5]);
+	sprintf(shell_cmd,"ipset add WhiteList_wifi_src %02x:%02x:%02x:%02x:%02x:%02x\n",addr[0]&0xff,addr[1]&0xff,addr[2]&0xff,addr[3]&0xff,addr[4]&0xff,addr[5]&0xff);
 	print_debug_log("%s %d %s\n",__FUNCTION__,__LINE__,shell_cmd);
 	system(shell_cmd);
 
@@ -24,7 +24,7 @@ int ipset_del(u8_t *addr,char *name_entry)
 		return -1;
 	}
 
-	sprintf(shell_cmd,"ipset del WhiteList_wifi_src %2x:%2x:%2x:%2x:%2x:%2x\n",addr[0],addr[1],addr[2],addr[3],addr[4],addr[5]);
+	sprintf(shell_cmd,"ipset del WhiteList_wifi_src %02x:%02x:%02x:%02x:%02x:%02x\n",addr[0]&0xff,addr[1]&0xff,addr[2]&0xff,addr[3]&0xff,addr[4]&0xff,addr[5]&0xff);
 	print_debug_log("%s %d \n",__FUNCTION__,__LINE__);
 	system(shell_cmd);
 
