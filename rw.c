@@ -58,7 +58,7 @@ int file_sort_by_key(char *fname,int filed,char *key)
 	}
 	
 	if (key !=NULL && filed >=0){
-		sprintf(shell_cmd,"sort -n -k %d -t \"%s\" \"%s\" -o \"%s\"",filed,key,fname,fname);
+		sprintf(shell_cmd,"sort -n -k %d -t \"%s\" \"%s\" -o \"%s\"  >/dev/null 2>&1",filed,key,fname,fname);
 		system(shell_cmd);
 	}
 	
@@ -205,6 +205,7 @@ ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8_t *addr)
 		memcpy(aplist_node->apinfo.apmac, addr, ETH_ALEN);
 		aplist_node->status = AC_NEW_HASH_NODE;
 		aplist_node->apinfo.id = DEFAULT_TMPLATE_ID_MAP;
+		aplist_node->fd = DEFAULT_FD;
 		hlist_add_head(&aplist_node->hlist, head);
 	}
 	return aplist_node;

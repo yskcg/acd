@@ -1213,9 +1213,25 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 
 			if ( ap ){
 				ap->online = apl->online;
-				if (ap->status == AC_NEW_HASH_NODE || ap->status == AC_INIT_OFFLINE){
-					status = AC_NEW_HASH_NODE;
+				if (ap->status == AC_NEW_HASH_NODE || ap->status == AC_INIT_OFFLINE ){
+					/*fix:when chang the AC control device network dhcp range ,maybe cause ap can't communicate with ac,ac can't send date to ap*/
+					if(ap->fd > 0){
+						close(ap->fd);
+					}
 					ap->client_addr = cl;
+					status = AC_NEW_HASH_NODE;
+				}else{
+					/*fix:when chang the AC control device network dhcp range ,maybe cause ap can't communicate with ac,ac can't send date to ap*/
+					if(ap->fd == DEFAULT_FD){
+						status = AC_NEW_HASH_NODE;
+						ap->client_addr = cl;
+					}else if( ap->fd != cl->s.fd.fd ){
+						if(ap->client_addr->s.fd.fd > 0){
+							close(ap->client_addr->s.fd.fd);
+							ap->client_addr = cl;
+							ap->fd = cl->s.fd.fd;
+						}
+					}
 				}
 				gettime(&ap->last_tv);
 				memcpy(&(ap->ud),&(apl->ud),sizeof(ecode_ud_spro));

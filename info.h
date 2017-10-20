@@ -84,6 +84,8 @@
 #define STATION_AUTH_GUEST		1
 #define STATION_AUTH_AUTH		2
 
+#define DEFAULT_FD				-1
+
 #ifndef container_of
 #define container_of(ptr, type, member)                                 \
     ({                                                              \
