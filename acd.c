@@ -1230,6 +1230,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 							close(ap->client_addr->s.fd.fd);
 							ap->client_addr = cl;
 							ap->fd = cl->s.fd.fd;
+							strcpy (ap->apinfo.rip, inet_ntoa(cl->localaddr.sin_addr));
 						}
 					}
 				}
