@@ -146,7 +146,7 @@ void check_station_status(struct uloop_timeout *t)
 				/*find the ap */
 				head = &aplist.hash[aplist_entry_hash(station->ap_mac)];
 				ap = aplist_entry_find(head,station->ap_mac);
-				if(ap != NULL ){
+				if(ap != NULL && station->auth != STATION_AUTH_INIT){
 					if(station->type){
 						if(ap->sta_5G_num >0){
 							ap->sta_5G_num = ap->sta_5G_num -1;
@@ -164,7 +164,7 @@ void check_station_status(struct uloop_timeout *t)
 					/*find the ssid ->templist id*/
 					for (i = 0; i<=MAX_TMP_ID; i++){
 						if(ap->apinfo.id & (0x01<<i)){
-							if(ap->apinfo.wifi_info.ssid_info[i].auth == WIFI_SIGNAL_DISABLE && \
+							if(ap->apinfo.wifi_info.ssid_info[i].auth == WIFI_SIGNAL_ENABLE_UNAUTH && \
 							   strcmp((const char *)ap->apinfo.wifi_info.ssid_info[i].ssid,(const char *)station->ssid) == 0){
 
 								/*sum the num of guest*/
@@ -1477,9 +1477,9 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 {
 	int i;
 	unsigned int sta_num = 0;
-	unsigned int sta_2G_num = 0;
+    unsigned int sta_2G_num = 0;
 	unsigned int sta_5G_num = 0;
-	unsigned int sta_guest_num = 0;
+	unsigned int sta_guest_num = 0;       
 	unsigned int sta_guest_2G_num = 0;
 	unsigned int sta_guest_5G_num = 0;
 
@@ -1565,6 +1565,7 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 				blobmsg_add_string(buf, "bssid", mac_temp);
 				blobmsg_add_u32 (buf, "online", station->status);
 				blobmsg_add_u32 (buf, "type", station->type);
+				blobmsg_add_u32 (buf, "guest", station->auth);
 				memset(ssid_temp,'\0',sizeof(ssid_temp));
 				sprintf(ssid_temp,"%s",station->ssid);
 				blobmsg_add_string(buf, "ssid", ssid_temp);
@@ -1573,24 +1574,26 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 				sta_num = sta_num +1;
 
 				if(station->auth == STATION_AUTH_GUEST){
-					if(station->type){
-						sta_guest_5G_num = sta_guest_5G_num +1;
-					}else{
-						sta_guest_2G_num = sta_guest_2G_num +1;
-					}
-					sta_guest_num = sta_guest_num +1;
+					   if(station->type){
+							   sta_guest_5G_num = sta_guest_5G_num +1;
+					   }else{
+							   sta_guest_2G_num = sta_guest_2G_num +1;
+					   }
+					   sta_guest_num = sta_guest_num +1;
 				}
 
 				if(station->type){
-					sta_5G_num = sta_5G_num +1;
+					   sta_5G_num = sta_5G_num +1;
 				}else{
-					sta_2G_num = sta_2G_num +1;
+					   sta_2G_num = sta_2G_num +1;
 				}
+
 
 				blobmsg_close_table (&b, table);
 			}
 		}
 	}
+
 	blobmsg_close_array (buf, arr);
 	blobmsg_add_u32 (buf, "sta_num", sta_num);
 	blobmsg_add_u32 (buf, "sta_2G_num", sta_2G_num);

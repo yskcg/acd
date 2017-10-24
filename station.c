@@ -82,12 +82,12 @@ sta_entry *stalist_entry_update(sta_entry *sta_info)
 		/*find the ssid ->templist id*/
 		for (i = 0; i<=MAX_TMP_ID; i++){
 			if(ap->apinfo.id & (0x01<<i)){
-				if(ap->apinfo.wifi_info.ssid_info[i].auth == WIFI_SIGNAL_DISABLE && \
+				if(ap->apinfo.wifi_info.ssid_info[i].auth == WIFI_SIGNAL_ENABLE_UNAUTH && \
 				   strcmp((const char *)ap->apinfo.wifi_info.ssid_info[i].ssid,(const char *)stalist_node->ssid) == 0){
 					/*add this station to the guest network*/
 					ipset_add(stalist_node->mac,GUEST_LIST_MAC);
 					
-					if(stalist_node->exist_flag == STATION_NEW){
+					if(stalist_node->exist_flag == STATION_NEW || stalist_node->auth !=STATION_AUTH_GUEST ){
 						/*sum the num of guest*/
 						if(sta_info->type){
 							ap->sta_guest_5G_num = ap->sta_guest_5G_num +1;
@@ -96,13 +96,46 @@ sta_entry *stalist_entry_update(sta_entry *sta_info)
 						}
 						ap->sta_guest_num = ap->sta_guest_num +1;
 					}
+
 					stalist_node->auth = STATION_AUTH_GUEST;
+					break;
+				}else if(ap->apinfo.wifi_info.ssid_info[i].auth == WIFI_SIGNAL_ENABLE_AUTH && \
+				   strcmp((const char *)ap->apinfo.wifi_info.ssid_info[i].ssid,(const char *)stalist_node->ssid) == 0){
+					stalist_node->auth = STATION_AUTH_AUTH;
 					break;
 				}
 			}
 		}
 	}else if(sta_info->status == STATION_OFF ){
 		ipset_del(stalist_node->mac,GUEST_LIST_MAC);
+
+		if(stalist_node->type){
+			if(ap->sta_5G_num >0){
+				ap->sta_5G_num = ap->sta_5G_num -1;
+			}
+		}else{
+			if(ap->sta_2G_num >0){
+				ap->sta_2G_num = ap->sta_2G_num -1;
+			}
+		}
+
+		if(ap->sta_num >0){
+			ap->sta_num = ap->sta_num -1;
+		}
+
+		/*for guest network station sum*/
+		if(stalist_node->auth == STATION_AUTH_GUEST){
+			/*sum the num of guest*/
+			if(sta_info->type){
+				ap->sta_guest_5G_num = ap->sta_guest_5G_num - 1;
+			}else{
+				ap->sta_guest_2G_num = ap->sta_guest_2G_num - 1;
+			}
+			ap->sta_guest_num = ap->sta_guest_num -1;
+		}
+		
+		stalist_node->auth = STATION_AUTH_INIT ;
+		
 	}
 
 	stalist_node->status = sta_info->status;
