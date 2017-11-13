@@ -199,7 +199,7 @@ ap_status_entry *aplist_entry_creat(struct hlist_head *head,const u8_t *addr)
 		return NULL;
 	}
 
-	aplist_node = (ap_status_entry *)calloc(1, sizeof(*aplist_node));;
+	aplist_node = (ap_status_entry *)calloc(1, sizeof(ap_status_entry));;
 	if (aplist_node) {
 		memset(aplist_node,'\0',sizeof(ap_status_entry));
 		memcpy(aplist_node->apinfo.apmac, addr, ETH_ALEN);
@@ -320,9 +320,9 @@ sta_entry *stalist_entry_creat(struct hlist_head *head,const u8_t *addr)
 		return NULL;
 	}
 
-	stalist_node = (sta_entry *)calloc(1, sizeof(*stalist_node));;
+	stalist_node = (sta_entry *)calloc(1, sizeof(sta_entry));;
 	if (stalist_node) {
-		memset(stalist_node,0,sizeof(stalist_node));
+		memset(stalist_node,0,sizeof(sta_entry));
 		/*The node operation*/
 		gettime(&stalist_node->time_stamp);
 		memcpy(stalist_node->mac, addr, ETH_ALEN);

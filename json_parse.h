@@ -7,6 +7,7 @@
 	#include <json.h>
 #else
 	#include <json-c/json.h>
+	#include <json-c/json_object.h>
 #endif
 
 #include "acd.h"

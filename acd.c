@@ -129,8 +129,6 @@ void check_station_status(struct uloop_timeout *t)
 	struct timeval tv;
 	sta_entry *station = NULL;
 	struct hlist_node *tmp;
-	ap_status_entry *ap = NULL;
-	struct hlist_head *head = NULL;
 
 	for(i = 0;i < AP_HASH_SIZE;i++){
 		if (hlist_empty(&(stalist.hash[i]))){
@@ -143,51 +141,6 @@ void check_station_status(struct uloop_timeout *t)
 			if (td > STATION_STATUS_CHECK_INTERVAL) {	//3 minute
 				/*del the WhiteList_wifi_src*/
 				ipset_del(station->mac,GUEST_LIST_MAC);
-				/*find the ap */
-				head = &aplist.hash[aplist_entry_hash(station->ap_mac)];
-				ap = aplist_entry_find(head,station->ap_mac);
-				if(ap != NULL && station->auth != STATION_AUTH_INIT){
-					if(station->type){
-						if(ap->sta_5G_num >0){
-							ap->sta_5G_num = ap->sta_5G_num -1;
-						}
-					}else{
-						if(ap->sta_2G_num >0){
-							ap->sta_2G_num = ap->sta_2G_num -1;
-						}
-					}
-					if(ap->sta_num >0){
-						ap->sta_num = ap->sta_num -1;
-					}
-
-					/*for guest network station sum*/
-					/*find the ssid ->templist id*/
-					for (i = 0; i<=MAX_TMP_ID; i++){
-						if(ap->apinfo.id & (0x01<<i)){
-							if(ap->apinfo.wifi_info.ssid_info[i].auth == WIFI_SIGNAL_ENABLE_UNAUTH && \
-							   strcmp((const char *)ap->apinfo.wifi_info.ssid_info[i].ssid,(const char *)station->ssid) == 0){
-
-								/*sum the num of guest*/
-								if(station->type){
-									if(ap->sta_guest_5G_num >0 ){
-										ap->sta_guest_5G_num = ap->sta_guest_5G_num -1;
-									}
-								}else{
-									if(ap->sta_guest_2G_num >0){
-										ap->sta_guest_2G_num = ap->sta_guest_2G_num -1;	
-									}
-								}
-
-								if (ap->sta_guest_num >0){
-									ap->sta_guest_num = ap->sta_guest_num -1;
-								}
-
-								break;
-							}
-						}
-					}
-				}
-
 				/*del the node*/
 				hlist_del(&station->hlist);
 				free(station);
@@ -220,7 +173,7 @@ static void client_read_cb(struct ustream *s, int bytes)
 	} while(1);
 
 	if (s->w.data_bytes > 256 && !ustream_read_blocked(s)) {
-		print_debug_log ("[debug] [Block read, bytes: %d]\n", s->w.data_bytes);
+		print_debug_log ("[Block read, bytes: %d]\n", s->w.data_bytes);
 		ustream_set_read_blocked (s, TRUE);
 	}
 }
@@ -231,7 +184,7 @@ static void client_close(struct ustream *s)
 	int i;
 	ap_status_entry *ap = NULL;
 
-	print_debug_log ("[debug] [fd:%d connection closed!!]\n", cl->s.fd.fd);
+	print_debug_log ("[fd:%d connection closed!!]\n", cl->s.fd.fd);
 	
 	/*show all ap info in this AC*/
 	for(i = 0;i < AP_HASH_SIZE;i++){
@@ -249,7 +202,7 @@ static void client_close(struct ustream *s)
 static void client_notify_state(struct ustream *s)
 {
 	struct client *cl = container_of (s, struct client, s.stream);
-	print_debug_log ("[debug] [fd:%d state changed: %d %d!!]\n", cl->s.fd.fd, s->eof, s->w.data_bytes);
+	print_debug_log ("[fd:%d state changed: %d %d!!]\n", cl->s.fd.fd, s->eof, s->w.data_bytes);
 	
 	if (!s->eof){
 		return;
@@ -281,7 +234,7 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
 
 	sl = sizeof (struct sockaddr_in);
 	if (getsockname(sfd, (struct sockaddr *)&cl->localaddr, &sl) != 0){
-		print_debug_log("[debug] getsockname errno: %s\n", errno);
+		print_debug_log("getsockname errno: %s\n", errno);
 	}
 
 	/*socket receive timeout set*/
@@ -302,8 +255,8 @@ static void server_cb(struct uloop_fd *fd, unsigned int events)
 
 	ustream_fd_init (&cl->s, sfd);
 	next_client = NULL;
-	print_debug_log("[debug] [New connection] [local ip:%s]\n", inet_ntoa(cl->localaddr.sin_addr));
-	print_debug_log("[debug] [New connection] [peer ip:%s fd:%d]\n", inet_ntoa(cl->sin.sin_addr), sfd);
+	print_debug_log("[New connection] [local ip:%s]\n", inet_ntoa(cl->localaddr.sin_addr));
+	print_debug_log("[New connection] [peer ip:%s fd:%d]\n", inet_ntoa(cl->sin.sin_addr), sfd);
 }
 
 
@@ -661,18 +614,18 @@ int sproto_read_entity(char *filename)
 	unsigned char spro_buf[BUFLEN];
 	
 	if ((fp = fopen(filename, "rb")) == NULL){
-		print_debug_log ("[debug] [error] [fopen() failed!]\n");
+		print_debug_log ("[error] [fopen() failed!]\n");
 		return -1;
 	}
 	
 	if ((len = fread(spro_buf, 1, sizeof(spro_buf), fp)) <= 0){
-		print_debug_log ("[debug] [error] [fread() failed!]\n");
+		print_debug_log ("[error] [fread() failed!]\n");
 		fclose (fp);
 		return 0;
 	}
 	
 	if ((spro_new = sproto_create(spro_buf, len)) == NULL){
-		print_debug_log ("[debug] [error] [sproto_create() failed!]\n");
+		print_debug_log ("[error] [sproto_create() failed!]\n");
 		fclose (fp);
 		return 0;
 	}
@@ -708,7 +661,7 @@ int sproto_encode_cb(void *ud, const char *tagname, int type, int index, struct 
 				*(uint32_t *) value = apcfg->cmd.status;
 			}
 			
-			print_debug_log("[debug] [encode] [%s:] [%d]\n", tagname, *(int *)value);
+			print_debug_log("[encode] [%s:] [%d]\n", tagname, *(int *)value);
 			return 4;
 		}
 		
@@ -717,7 +670,7 @@ int sproto_encode_cb(void *ud, const char *tagname, int type, int index, struct 
 				*(int *) value = self->ok;
 			}
 			
-			print_debug_log("[debug] [encode] [%s:] [%d]\n", tagname, *(int *)value);
+			print_debug_log("[encode] [%s:] [%d]\n", tagname, *(int *)value);
 			return 4;
 		}
 		
@@ -727,7 +680,7 @@ int sproto_encode_cb(void *ud, const char *tagname, int type, int index, struct 
 					sz = strlen(value);
 			}else{
 				fill_encode_data (apcfg, (char *) tagname, (char *) value);
-				print_debug_log("[debug] [encode] [%s:] [%s]\n", tagname, (char *)value);
+				print_debug_log("[encode] [%s:] [%s]\n", tagname, (char *)value);
 				sz = strlen ((char *) value);
 			}
 			return sz;
@@ -739,7 +692,7 @@ int sproto_encode_cb(void *ud, const char *tagname, int type, int index, struct 
 		}
 		
 		default:
-		print_debug_log ("[debug] [unknown type]\n");
+		print_debug_log ("[unknown type]\n");
 	}
 	return 1;
 }
@@ -751,7 +704,7 @@ int sproto_encode_data(struct encode_ud *ud, char *res)
 	struct sproto_type *pro_type;
 
 	if((pro_type = sproto_type(spro_new, "package")) == NULL){
-		print_debug_log ("[debug] [error] [sproto_type() failed!]\n");
+		print_debug_log ("[error] [sproto_type() failed!]\n");
 		return 0;
 	}
 	
@@ -763,16 +716,16 @@ int sproto_encode_data(struct encode_ud *ud, char *res)
 	
 	memcat (buf, header, 0, header_len);
 	len = header_len;
-	print_debug_log ("[debug] [encode type:%d]\n", ud->type);
+	print_debug_log ("[encode type:%d]\n", ud->type);
 
 	if((pro_type = sproto_protoquery(spro_new, ud->type, ud->session)) == NULL){
-		print_debug_log ("[debug] [error] [sproto_protoquery() failed!]\n");
+		print_debug_log ("[error] [sproto_protoquery() failed!]\n");
 		return 0;
 	}
 	
 	bzero (pro_buf, sizeof (pro_buf));
 	if((rpc_len = sproto_encode(pro_type, pro_buf, sizeof(pro_buf), sproto_encode_cb, ud)) < 0){
-		print_debug_log ("[debug] [error] [sproto_encode() failed!]\n");
+		print_debug_log ("[error] [sproto_encode() failed!]\n");
 		return 0;
 	}
 	
@@ -780,7 +733,7 @@ int sproto_encode_data(struct encode_ud *ud, char *res)
 	len += rpc_len;
 
 	size = sproto_pack (buf, len, res, sizeof (buf));
-	print_debug_log ("[debug] [encode len:%d] [pack size:%d]\n", len, size);
+	print_debug_log ("[encode len:%d] [pack size:%d]\n", len, size);
 	return size;
 }
 
@@ -819,13 +772,12 @@ void fill_encode_data(ap_status_entry *apcfg, char *tagname, char *value)
 void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 {
 	unsigned char mac_value[ETH_ALEN] = {0};
-	sta_entry *station = NULL;
-	
+
 	if (apcfg == NULL || strlen (value) == 0 || len == 0){
 		return;
 	}
 
-	print_debug_log("[debug:][%s] [tagname]:%s [value]:%s \n",__FUNCTION__,tagname,value);
+	print_debug_log("[%s] [tagname]:%s [value]:%s \n",__FUNCTION__,tagname,value);
 	if (strcasecmp (tagname, "hver") == 0){
 		memset(apcfg->apinfo.hver,'\0',sizeof(apcfg->apinfo.hver));
 		strncpy (apcfg->apinfo.hver, value, len);
@@ -858,14 +810,8 @@ void fill_data(ap_status_entry *apcfg, char *tagname, char *value, int len)
 		memset(apcfg->apinfo.wifi_info.txpower ,'\0',sizeof(apcfg->apinfo.wifi_info.txpower));
 		strncpy(apcfg->apinfo.wifi_info.txpower, value, len);
 	}else if (strcasecmp(tagname, "stamac") == 0){
-		/*insert the stalist hash list*/
-		mac_string_to_value((unsigned char *)value,mac_value);	
-		station = stalist_entry_insert(mac_value);
-		if (station){
-			if(apcfg->apinfo.apmac){
-				memcpy(station->ap_mac,apcfg->apinfo.apmac, ETH_ALEN);
-			}
-		}
+		/*no use any more*/
+		return ;
 	}
 	return;
 }
@@ -921,17 +867,17 @@ int sproto_parser_cb(void *ud, const char *tagname, int type, int index, struct 
 			}else if (strcasecmp(tagname, "sta_type") == 0){
 				sta_status_info->type = *(int *) value;
 			}
-			print_debug_log ("[debug] [decode] [%s:] [%d]\n", tagname, *(int *) value);
+			print_debug_log ("[decode] [%s:] [%d]\n", tagname, *(int *) value);
 			break;
 
 		case SPROTO_TBOOLEAN:
 			self->ok = *(int *) value;
-			print_debug_log ("[debug] [decode] [%s:] [%d]\n", tagname, *(int *) value);
+			print_debug_log ("[decode] [%s:] [%d]\n", tagname, *(int *) value);
 			break;
 		
 		case SPROTO_TSTRING:
 			strncpy(val, value, length);
-			print_debug_log("[debug] [decode] [%s: %s,%d]\n", tagname, val, length);
+			print_debug_log("[decode] [%s: %s,%d]\n", tagname, val, length);
 			if (self->type == STA_INFO){
 				fill_data_sta_info(sta_status_info,(char *) tagname,val,length);
 			}else{
@@ -949,7 +895,7 @@ int sproto_parser_cb(void *ud, const char *tagname, int type, int index, struct 
 			break;
 		
 		default:
-			print_debug_log ("[debug] [unknown type]\n");
+			print_debug_log ("[unknown type]\n");
 			break;
 	}
 	return 0;
@@ -961,17 +907,17 @@ int sproto_header_parser(char *pack, int size, struct encode_ud *ud, char *unpac
 	struct sproto_type *stype;
 
 	if ((unpack_len = sproto_unpack(pack, size, unpack, BUFLEN)) <= 0){
-		print_debug_log ("[debug] [error] [sproto_unpack() failed!]\n");
+		print_debug_log ("[error] [sproto_unpack() failed!]\n");
 		return 0;
 	}
 
 	if ((stype = sproto_type(spro_new, "package")) == NULL){
-		print_debug_log ("[debug] [error] [sproto_type() failed!]\n");
+		print_debug_log ("[error] [sproto_type() failed!]\n");
 		return 0;
 	}
 
 	if ((header_len = sproto_decode(stype, unpack, unpack_len, sproto_parser_cb, ud)) <= 0){
-		print_debug_log ("[debug] [error] [sproto_decode() failed!]\n");
+		print_debug_log ("[error] [sproto_decode() failed!]\n");
 		return 0;
 	}
 
@@ -984,12 +930,12 @@ int sproto_parser(char *data, int headlen, struct encode_ud *ud)
 	int len;
 
 	if ((stype = sproto_protoquery(spro_new, ud->type, ud->session)) == NULL){
-		print_debug_log ("[debug] [error] [sproto_protoquery() failed!]\n");
+		print_debug_log ("[error] [sproto_protoquery() failed!]\n");
 		return 0;
 	}
 
 	if ((len = sproto_decode(stype, data + headlen, BUFLEN, sproto_parser_cb, ud)) <= 0){
-		print_debug_log ("[debug] [error] [sproto_decode() failed!]\n");
+		print_debug_log ("[error] [sproto_decode() failed!]\n");
 		return 0;
 	}
 
@@ -1005,7 +951,9 @@ void free_mem(ap_status_entry *ap)
 
 	ap->online = OFF;
 	ap->status = AC_INIT_OFFLINE;
-	
+	print_debug_log ("[%s :%d ] [station :%s mac:%02x:%02x:%02x:%02x:%02x:%02x: OFF!]\n",__FUNCTION__,__LINE__,ap->apname,\
+					ap->apinfo.apmac[0]&0xff,ap->apinfo.apmac[1]&0xff,ap->apinfo.apmac[2]&0xff,ap->apinfo.apmac[3]&0xff,ap->apinfo.apmac[4]&0xff,ap->apinfo.apmac[5]&0xff);
+
 	if (ap->client_addr != NULL){
 		ustream_free (&ap->client_addr->s.stream);
 		
@@ -1090,12 +1038,12 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 	ap_status_entry *apl = NULL ;
 	ap_status_entry *ap = NULL;
 
-	print_debug_log ("[debug] [rcv] [data len:%d, fd:%d]\n", len, cl->s.fd.fd);
+	print_debug_log ("[rcv] [data len:%d, fd:%d]\n", len, cl->s.fd.fd);
 	
 	/*sproto header parse：type and session*/
 	memset(&ud,0,sizeof(ecode_ud_spro));
 	if ((headlen = sproto_header_parser(data, len, &ud, unpack)) <= 0){
-		print_debug_log ("[debug] [error] [sproto header parser failed!!]\n");
+		print_debug_log ("[error] [sproto header parser failed!!]\n");
 		return -1;
 	}
 
@@ -1108,7 +1056,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 
 		/*sproto encoded data parse*/
 		if (sproto_parser (unpack, headlen, &ud) <= 0){
-			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
+			print_debug_log ("[error] [sproto_parser() failed!]\n");
 		}
 	
 		stalist_entry_update(stal);
@@ -1120,7 +1068,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 		memcpy(&(stal->ud),&ud,sizeof(ud));
 		/*sproto encoded data parse*/
 		if (sproto_parser (unpack, headlen, &ud) <= 0){
-			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
+			print_debug_log ("[error] [sproto_parser() failed!]\n");
 		}
 
 		/*must dynamic get the ac info*/
@@ -1138,11 +1086,9 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 		apl = &apcfg_receive;
 		apl->client_addr = cl;
 		memcpy(&(apl->ud),&ud,sizeof(ud));
-		//print_debug_log("%s %d model:%s mac:%02x:%02x:%02x:%02x:%02x:%02x sn:%s \n",__FUNCTION__,__LINE__,\
-				apl->apinfo.model,apl->apinfo.apmac[0],apl->apinfo.apmac[1],apl->apinfo.apmac[2],apl->apinfo.apmac[3],apl->apinfo.apmac[4],apl->apinfo.apmac[5],\
-				apl->apinfo.sn);
+
 		if (sproto_parser (unpack, headlen, &(ud)) <= 0){
-			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
+			print_debug_log ("[error] [sproto_parser() failed!]\n");
 			goto error;
 		}
 
@@ -1155,10 +1101,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 				return ACd_STATUS_REBOOT_OK;	
 			}
 		}
-	
-		//print_debug_log("%s %d model:%s mac:%02x:%02x:%02x:%02x:%02x:%02x sn:%s \n",__FUNCTION__,__LINE__,\
-				apl->apinfo.model,apl->apinfo.apmac[0],apl->apinfo.apmac[1],apl->apinfo.apmac[2],apl->apinfo.apmac[3],apl->apinfo.apmac[4],apl->apinfo.apmac[5],\
-				apl->apinfo.sn);
+
 		return ACd_STATUS_OK;
 	}else if(ud.type == AP_INFO ){
 		/*AP_INFO(AC config the AP) don't handle if OK*/
@@ -1172,7 +1115,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 		memcpy(&(apl->ud),&ud,sizeof(ud));
 
 		if (sproto_parser (unpack, headlen, &(ud)) <= 0){
-			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
+			print_debug_log ("[error] [sproto_parser() failed!]\n");
 			goto error;
 		}
 
@@ -1190,7 +1133,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 			}
 
 		}else{
-			print_debug_log ("[debug] <receive> [response pack]\n");
+			print_debug_log ("<receive> [response pack]\n");
 			return ACd_STATUS_OK;
 		}
 	}else if(ud.type == AP_STATUS){/*AP_STATUS->ap send the heart beat to ac*/
@@ -1202,7 +1145,7 @@ int rcv_and_proc_data(char *data, int len, struct client *cl)
 		apl->online = ON;
 
 		if (sproto_parser (unpack, headlen, &(ud)) <= 0){
-			print_debug_log ("[debug] [error] [sproto_parser() failed!]\n");
+			print_debug_log ("[error] [sproto_parser() failed!]\n");
 			goto error;
 		}
 
@@ -1261,7 +1204,7 @@ error:
 	ap->ud.session = SPROTO_RESPONSE;
 	ap->ud.ok = RESPONSE_ERROR;
 	slen = send_data_to_ap (ap);
-	print_debug_log ("[debug] <send> [data len:%d]\n", slen);
+	print_debug_log ("<send> [data len:%d]\n", slen);
 
 	return -1;
 }
@@ -1367,17 +1310,27 @@ int send_acinfo_to_ap (device_info * ac)
 
 void print_debug_log(const char *form ,...)
 {
+	int len = 0;
+	int offsets = 0;
 	if (debug == NULL){
 		return;
 	}
 
 	va_list arg;
 	char pbString[256];
+	time_t t;
 
+	/*add the timestamp*/
+	time(&t);
+	len = sprintf(pbString,"%s",ctime(&t));
+	offsets = len;
+	len = sprintf(pbString+offsets -1,"[debug]");
+	offsets = offsets + len;
 	va_start (arg, form);
-	vsprintf (pbString, form, arg);
+	vsprintf (pbString+offsets -1, form, arg);
 	fprintf (debug, pbString);
 	va_end (arg);
+	fflush(debug);
 	return;
 }
 
@@ -1503,9 +1456,12 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 		td = tv_diff(&tv, &ap->last_tv);
 		
 		if (td > (HEAR_BEAT_INTEVAL)) {// 30s
-			print_debug_log ("[debug] set offline for lost heartbeat %lu\n", td);
+			print_debug_log ("set offline for lost heartbeat %lu\n", td);
 			ap->online = OFF;
 			ap->status = AC_INIT_OFFLINE;
+			print_debug_log ("[%s :%d ] [station :%s mac:%02x:%02x:%02x:%02x:%02x:%02x: timeout OFF!]\n",__FUNCTION__,__LINE__,ap->apname,\
+					ap->apinfo.apmac[0]&0xff,ap->apinfo.apmac[1]&0xff,ap->apinfo.apmac[2]&0xff,ap->apinfo.apmac[3]&0xff,ap->apinfo.apmac[4]&0xff,ap->apinfo.apmac[5]&0xff);
+
 		}
 	}
 	
@@ -1544,6 +1500,11 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 		}
 		hlist_for_each_entry(station, &(stalist.hash[i]), hlist) {
 			if (ether_addr_equal((const u8 *)station->ap_mac,(const u8 *)ap->apinfo.apmac)){
+				if (is_broadcast_ether_addr((const u8 *)station->bssid) \
+					|| is_multicast_ether_addr((const u8 *)station->bssid) \
+					|| is_zero_ether_addr((const u8 *)station->bssid)){
+					continue ;
+				}
 				table = blobmsg_open_table (&b, NULL);
 				memset(mac_temp,'\0',sizeof(mac_temp));
 				sprintf(mac_temp,"%02x:%02x:%02x:%02x:%02x:%02x",\
@@ -1595,13 +1556,14 @@ static void apinfo_to_json_string(struct blob_buf *buf, ap_status_entry *ap)
 	}
 
 	blobmsg_close_array (buf, arr);
+
 	blobmsg_add_u32 (buf, "sta_num", sta_num);
 	blobmsg_add_u32 (buf, "sta_2G_num", sta_2G_num);
 	blobmsg_add_u32 (buf, "sta_5G_num", sta_5G_num);
-
 	blobmsg_add_u32 (buf, "sta_guest_num", sta_guest_num);
 	blobmsg_add_u32 (buf, "sta_guest_2G_num", sta_guest_2G_num);
 	blobmsg_add_u32 (buf, "sta_guest_5G_num", sta_guest_5G_num);
+
 	return;
 }
 
@@ -2561,6 +2523,47 @@ error:
 	return ubus_send_reply (ctx, req, b.head);
 }
 
+static const struct blobmsg_policy acd_debug_policy[__CFG_MAX] = {
+	[DEBUG] = {.name = "enable",.type = BLOBMSG_TYPE_BOOL },
+
+};
+
+static int ubus_proc_acd_debug(struct ubus_context *ctx, struct ubus_object *obj,
+		  struct ubus_request_data *req, const char *method,
+		  struct blob_attr *msg)
+{
+	struct blob_attr *tb[__CFG_MAX];
+	char debug_flag = 0;
+
+	blob_buf_init (&b, 0);
+	blobmsg_parse(acd_debug_policy, ARRAY_SIZE(acd_debug_policy), tb, blob_data(msg), blob_len(msg));
+
+	if (tb[DEBUG] ){
+		debug_flag = blobmsg_get_bool(tb[DEBUG]);
+	}
+
+	if (debug_flag == TRUE){
+		if ((debug = fopen(LOG_FILE, "a")) == NULL){
+			debug = stdout;
+			goto error;
+		}
+
+		blobmsg_add_string (&b, "status", "ok");
+		ubus_send_reply (ctx, req, b.head);
+	}else if(debug_flag == FALSE){
+		debug = NULL;
+		blobmsg_add_string (&b, "status", "off");
+		ubus_send_reply (ctx, req, b.head);
+	}
+
+	return UBUS_STATUS_OK;
+
+error:
+	blobmsg_add_string (&b, "status", "error");
+	
+	return ubus_send_reply (ctx, req, b.head);
+
+}
 
 static const struct ubus_method acd_methods[] = {
 	UBUS_METHOD_MASK ("apinfo", ubus_proc_apinfo, apinfo_policy, 1 << MAC),
@@ -2571,6 +2574,7 @@ static const struct ubus_method acd_methods[] = {
 	UBUS_METHOD_MASK ("templatedel", ubus_proc_templatedel, templatedel_policy, 1 << TMPLATID),
 	UBUS_METHOD_MASK ("apdel", ubus_proc_apdel, apdel_policy,  1 << MAC | 1 << SN),
 	UBUS_METHOD_MASK ("apcmd", ubus_proc_apcmd, apcmd_policy, 1 << MAC | 1 << SN | 1 << CMD | 1 << ADDR),
+	UBUS_METHOD_MASK ("debug", ubus_proc_acd_debug, acd_debug_policy, 1 << DEBUG),
 };
 
 static struct ubus_object_type acd_object_type = UBUS_OBJECT_TYPE ("acd", acd_methods);

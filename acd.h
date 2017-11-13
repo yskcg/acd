@@ -9,6 +9,7 @@
 #include "station.h"
 #include "json_parse.h"
 
+#define LOG_FILE				"/tmp/log/acd.log"
 #define AP_LIST_FILE        	"/etc/aplist"
 #define TP_LIST_FILE			"/etc/tplist"
 #define DEVICE_INFO				"/tmp/log/device_info"

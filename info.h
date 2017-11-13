@@ -122,6 +122,7 @@ enum {
 	TYPE,
 	AUTH,
     MODEL,
+	DEBUG,
     __CFG_MAX
 };
 

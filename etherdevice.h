@@ -16,6 +16,21 @@ static inline unsigned char is_multicast_ether_addr(const u8 *addr)
 }
 
 /**
+ * is_broadcast_ether_addr - Determine if the Ethernet address is broadcast
+ * @addr: Pointer to a six-byte array containing the Ethernet address
+ *
+ * Return true if the address is the broadcast address.
+ *
+ * Please note: addr must be aligned to u16.
+ */
+static inline unsigned char is_broadcast_ether_addr(const u8 *addr)
+{
+    return (*(const u16 *)(addr + 0) &
+        *(const u16 *)(addr + 2) &
+        *(const u16 *)(addr + 4)) == 0xffff;
+}
+
+/**
  * is_local_ether_addr - Determine if the Ethernet address is locally-assigned one (IEEE 802).
  * @addr: Pointer to a six-byte array containing the Ethernet address
  *
