@@ -72,6 +72,8 @@ sta_entry *stalist_entry_update(sta_entry *sta_info)
 		}
 		ap->sta_num = ap->sta_num +1;
 
+		/*del first*/
+		ipset_del(stalist_node->mac,GUEST_LIST_MAC);
 		/*find the ssid ->templist id*/
 		for (i = 0; i<=MAX_TMP_ID; i++){
 			if(ap->apinfo.id & (0x01<<i)){
