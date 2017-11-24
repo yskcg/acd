@@ -135,15 +135,17 @@ void check_station_status(struct uloop_timeout *t)
 			continue;
 		}
 		hlist_for_each_entry_safe(station,tmp,&(stalist.hash[i]), hlist) {
-			gettime(&tv);
-			td = tv_diff(&tv, &station->time_stamp);
+			if(station->status == STATION_OFF){
+				gettime(&tv);
+				td = tv_diff(&tv, &station->time_stamp);
 
-			if (td > STATION_STATUS_CHECK_INTERVAL) {	//3 minute
-				/*del the WhiteList_wifi_src*/
-				ipset_del(station->mac,GUEST_LIST_MAC);
-				/*del the node*/
-				hlist_del(&station->hlist);
-				free(station);
+				if (td > STATION_STATUS_CHECK_INTERVAL*4) {	//3 minute
+					/*del the WhiteList_wifi_src*/
+					ipset_del(station->mac,GUEST_LIST_MAC);
+					/*del the node*/
+					hlist_del(&station->hlist);
+					free(station);
+				}
 			}
 		}
 	}
